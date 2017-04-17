@@ -18,6 +18,7 @@ enum sha_algos {
 	ALGO_DMD_GR,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
+	ALGO_GOST,
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_HMQ1725,
@@ -78,6 +79,7 @@ static const char *algo_names[] = {
 	"dmd-gr",
 	"fresh",
 	"fugue256",
+	"gost",
 	"groestl",
 	"heavy",
 	"hmq1725",
