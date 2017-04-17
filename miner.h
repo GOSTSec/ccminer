@@ -883,6 +883,7 @@ void scryptjane_hash(void* output, const void* input);
 void sha256d_hash(void *output, const void *input);
 void sha256t_hash(void *output, const void *input);
 void sibhash(void *output, const void *input);
+void gosthash(void *output, const void *input);
 void skeincoinhash(void *output, const void *input);
 void skein2hash(void *output, const void *input);
 void s3hash(void *output, const void *input);
