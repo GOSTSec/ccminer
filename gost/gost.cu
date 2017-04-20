@@ -32,8 +32,8 @@ extern "C" void gosthash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-extern void gost_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
-extern void gost_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void gost_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
+extern void gost_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "sib"
@@ -66,24 +66,23 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 		}
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), -1);
+		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 80 * throughput), -1);
 
 		cuda_check_cpu_init(thr_id, throughput);
 
 		init[thr_id] = true;
 	}
 
-	uint32_t endiandata[20];
 	for (int k=0; k < 20; k++)
-		be32enc(&endiandata[k], pdata[k]);
+		be32enc(&d_hash[thr_id][k], pdata[k]);
 
 	do {
 		int order = 0;
 
 		// Hash with CUDA
-		gost_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		gost_hash_64(thr_id, throughput, d_hash[thr_id]);
 		TRACE("gost64   :");
-		gost_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		gost_hash_32(thr_id, throughput, d_hash[thr_id]);
 		TRACE("gost32   :");
 
 		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
@@ -91,8 +90,8 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			const uint32_t Htarg = ptarget[7];
 			uint32_t _ALIGN(64) vhash[8];
-			be32enc(&endiandata[19], work->nonces[0]);
-			gosthash(vhash, endiandata);
+			be32enc(&d_hash[thr_id][19], work->nonces[0]);
+			gosthash(vhash, d_hash[thr_id]);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
@@ -100,8 +99,8 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 				work->nonces[1] =cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				*hashes_done = pdata[19] - first_nonce + throughput;
 				if (work->nonces[1] != 0) {
-					be32enc(&endiandata[19], work->nonces[1]);
-					sibhash(vhash, endiandata);
+					be32enc(&d_hash[thr_id][19], work->nonces[1]);
+					sibhash(vhash, d_hash[thr_id]);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;

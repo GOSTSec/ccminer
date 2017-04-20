@@ -578,6 +578,14 @@ void GOST_Copy512(uint64_t* dst, uint64_t* const __restrict__ src)
 }
 
 __device__ __forceinline__
+void GOST_Copy256(uint64_t* dst, uint64_t* const __restrict__ src)
+{
+	#pragma unroll
+	for (int i=0; i<4; i++)
+		dst[i] = src[i];
+}
+
+__device__ __forceinline__
 void GOST_Xor512(uint64_t* C, uint64_t* const A, const uint64_t* B)
 {
 #if 1
@@ -1058,21 +1066,21 @@ void GOST_hash_X(uint64_t *hash, uchar * const message, uint64_t len)
 
 __global__
 __launch_bounds__(128, 3)
-void streebog_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
+void streebog_gpu_hash_64(uint32_t threads, uint64_t *g_hash) // 80 bytes input
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
 	{
 		uint64_t* inout = (&g_hash[thread * 8U]);
 		uint64_t hash[8] = { 0 }; //iv 
-		GOST_hash_X(hash, (uchar*) inout, 512);
+		GOST_hash_X(hash, (uchar*) inout, 640);
 		GOST_Copy512(inout, hash);
 	}
 }
 
 __global__
 __launch_bounds__(128, 3)
-void streebog_gpu_hash_32(uint32_t threads, uint64_t *g_hash)
+void streebog_gpu_hash_32(uint32_t threads, uint64_t *g_hash) // 64 bytes input
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -1081,12 +1089,12 @@ void streebog_gpu_hash_32(uint32_t threads, uint64_t *g_hash)
 		uint64_t hash[8];
 		memset (&hash, 1, 64); // iv
 		GOST_hash_X(hash, (uchar*) inout, 512);
-		GOST_Copy512(inout, hash);
+		GOST_Copy256(inout, hash);
 	}
 }
 
 __host__
-void gost_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+void gost_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	const int threadsperblock = 128;
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
@@ -1096,7 +1104,7 @@ void gost_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *
 }
 
 __host__
-void gost_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash)
+void gost_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash)
 {
 	const int threadsperblock = 128;
 	dim3 grid((threads + threadsperblock-1) / threadsperblock);
