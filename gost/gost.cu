@@ -92,7 +92,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 			const uint32_t Htarg = ptarget[7];
 			uint32_t _ALIGN(64) vhash[8];
 			be32enc(&endiandata[19], work->nonces[0]);
-			sibhash(vhash, endiandata);
+			gosthash(vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
