@@ -32,7 +32,8 @@ extern "C" void gosthash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-extern void streebog_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
+extern void gost_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern void gost_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "sib"
@@ -80,8 +81,10 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 		int order = 0;
 
 		// Hash with CUDA
-		streebog_cpu_hash_64(thr_id, throughput, d_hash[thr_id]);
-		TRACE("gost   :");
+		gost_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		TRACE("gost64   :");
+		gost_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]);
+		TRACE("gost32   :");
 
 		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id]);
 		if (work->nonces[0] != UINT32_MAX)
