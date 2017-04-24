@@ -2111,6 +2111,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_DECRED:
 			case ALGO_SHA256D:
 			case ALGO_SHA256T:
+			case ALGO_GOST:
 			//case ALGO_WHIRLPOOLX:
 				minmax = 0x40000000U;
 				break;

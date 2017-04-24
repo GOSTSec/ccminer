@@ -36,7 +36,7 @@ extern void gost_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash);
 extern void gost_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash);
 
 //#define _DEBUG
-#define _DEBUG_PREFIX "sib"
+#define _DEBUG_PREFIX "gost"
 #include "cuda_debug.cuh"
 
 static bool init[MAX_GPUS] = { 0 };
