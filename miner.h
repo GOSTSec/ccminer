@@ -358,6 +358,7 @@ extern void free_quark(int thr_id);
 extern void free_qubit(int thr_id);
 extern void free_sha256d(int thr_id);
 extern void free_sha256t(int thr_id);
+extern void free_gostd(int thr_id);
 extern void free_sia(int thr_id);
 extern void free_sib(int thr_id);
 extern void free_skeincoin(int thr_id);

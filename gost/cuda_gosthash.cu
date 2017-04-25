@@ -1069,35 +1069,6 @@ void GOST_hash_X(uint64_t *hash, uchar * const message, uint64_t len)
 }
 
 __global__
-__launch_bounds__(128, 3)
-void streebog_gpu_hash_64(uint32_t threads, uint64_t *g_hash) // 80 bytes input
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint64_t* inout = (&g_hash[thread * 8U]);
-		uint64_t hash[8] = { 0 }; //iv 
-		GOST_hash_X(hash, (uchar*) inout, 640);
-		GOST_Copy512(inout, hash);
-	}
-}
-
-__global__
-__launch_bounds__(128, 3)
-void streebog_gpu_hash_32(uint32_t threads, uint64_t *g_hash) // 64 bytes input
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint64_t* inout = (&g_hash[thread * 8U]);
-		uint64_t hash[8];
-		memset (&hash, 1, 64); // iv
-		GOST_hash_X(hash, (uchar*) inout, 512);
-		GOST_Copy256(inout, hash);
-	}
-}
-
-__global__
 /*__launch_bounds__(256,3)*/
 void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
 {
@@ -1126,26 +1097,6 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 			//d_target[0] = high;
 		}
 	}
-}
-
-__host__
-void gost_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
-{
-	const int threadsperblock = 128;
-	dim3 grid((threads + threadsperblock-1) / threadsperblock);
-	dim3 block(threadsperblock);
-
-	streebog_gpu_hash_64<<<grid, block>>>(threads, (uint64_t*)d_hash);
-}
-
-__host__
-void gost_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash)
-{
-	const int threadsperblock = 128;
-	dim3 grid((threads + threadsperblock-1) / threadsperblock);
-	dim3 block(threadsperblock);
-
-	streebog_gpu_hash_32<<<grid, block>>>(threads, (uint64_t*)d_hash);
 }
 
 __host__
