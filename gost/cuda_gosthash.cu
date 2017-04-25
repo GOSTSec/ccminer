@@ -14,6 +14,10 @@
 
 typedef unsigned char uchar;
 
+static uint32_t* d_resNonces[MAX_GPUS] = { 0 };
+__constant__ static uint32_t __align__(8) c_header[19];
+__constant__ static uint32_t __align__(8) c_target[2]; // up to 64 bits
+
 //#define FULL_UNROLL
 
 #define memcpy(dst, src, len) { \
@@ -1093,6 +1097,37 @@ void streebog_gpu_hash_32(uint32_t threads, uint64_t *g_hash) // 64 bytes input
 	}
 }
 
+__global__
+/*__launch_bounds__(256,3)*/
+void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	if (thread < threads)
+	{
+		const uint32_t nonce = startNonce + thread;
+		uint32_t dat[20];
+		#pragma unroll
+		for (int i = 0; i < 19; i++) dat[i] = c_header[i];
+		dat[19] = nonce;
+		uint64_t hash1[8] = { 0 }; //iv	for 512
+		GOST_hash_X(hash1, (uchar*)dat, 640); // 80 bytes
+		uint64_t hash[8];
+		#pragma unroll
+		for (int i=0; i<64; i++) ((uchar *)hash)[i] = 1; // iv for 256
+		GOST_hash_X(hash, (uchar *)hash1, 512); // 64 bytes
+		// result is first 32 bytes of hash
+
+		// check nonce
+		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_LODWORD(hash[3])), cuda_swab32(_HIDWORD(hash[3]))); // swab uint64_t
+		if (high <= c_target[0]) 
+		{
+			//printf("%08x %08x - %016llx %016llx - %08x %08x\n", buf[7], buf[6], high, d_target[0], c_target[1], c_target[0]);
+			resNonces[1] = atomicExch(resNonces, nonce);
+			//d_target[0] = high;
+		}
+	}
+}
+
 __host__
 void gost_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash)
 {
@@ -1111,4 +1146,47 @@ void gost_hash_32(int thr_id, uint32_t threads, uint32_t *d_hash)
 	dim3 block(threadsperblock);
 
 	streebog_gpu_hash_32<<<grid, block>>>(threads, (uint64_t*)d_hash);
+}
+
+__host__
+void gostd_init(int thr_id)
+{
+	cuda_get_arch(thr_id);
+	CUDA_SAFE_CALL(cudaMalloc(&d_resNonces[thr_id], 2*sizeof(uint32_t)));
+}
+
+__host__
+void gostd_free(int thr_id)
+{
+	if (d_resNonces[thr_id]) cudaFree(d_resNonces[thr_id]);
+	d_resNonces[thr_id] = NULL;
+}
+
+__host__
+void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
+{
+	uint32_t buf[19];
+	for (int i=0;i<19;i++) buf[i] = cuda_swab32(pdata[i]);
+
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header, buf, 76, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
+}
+
+__host__
+void gostd_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces)
+{
+	const uint32_t threadsperblock = 256;
+
+	dim3 grid(threads/threadsperblock);
+	dim3 block(threadsperblock);
+
+	CUDA_SAFE_CALL(cudaMemset(d_resNonces[thr_id], 0xFF, 2 * sizeof(uint32_t)));
+	cudaThreadSynchronize();
+	gostd_gpu_hash_80 <<<grid, block>>> (threads, startNonce, d_resNonces[thr_id]);
+	cudaThreadSynchronize();
+
+	CUDA_SAFE_CALL(cudaMemcpy(resNonces, d_resNonces[thr_id], 2 * sizeof(uint32_t), cudaMemcpyDeviceToHost));
+	if (resNonces[0] == resNonces[1]) {
+		resNonces[1] = UINT32_MAX;
+	}
 }
