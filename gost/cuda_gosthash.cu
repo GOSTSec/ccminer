@@ -16,7 +16,7 @@ typedef unsigned char uchar;
 
 static uint32_t* d_resNonces[MAX_GPUS] = { 0 };
 __constant__ static uint32_t __align__(8) c_header[19];
-__constant__ static uint32_t __align__(8) c_target[2]; // up to 64 bits
+__device__ uint64_t d_target[1];
 
 //#define FULL_UNROLL
 
@@ -1090,7 +1090,7 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 
 		// check nonce
 		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_LODWORD(hash[3])), cuda_swab32(_HIDWORD(hash[3]))); // swab uint64_t
-		if (high <= c_target[0]) 
+		if (high <= d_target[0]) 
 		{
 			//printf("%08x %08x - %016llx %016llx - %08x %08x\n", buf[7], buf[6], high, d_target[0], c_target[1], c_target[0]);
 			resNonces[1] = atomicExch(resNonces, nonce);
@@ -1120,7 +1120,7 @@ void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 	for (int i=0;i<19;i++) buf[i] = cuda_swab32(pdata[i]);
 
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header, buf, 76, 0, cudaMemcpyHostToDevice));
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
 }
 
 __host__
