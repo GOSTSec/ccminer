@@ -570,7 +570,13 @@ void ADD_ASM_512_32(uint32_t* x, uint32_t* const a, uint32_t* const b)
 __device__ __forceinline__
 void GOST_Add512(void *x, void * const a, void * const b)
 {
-	ADD_ASM_512_32((uint32_t*)x, (uint32_t*)a, (uint32_t*)b);
+	//ADD_ASM_512_32((uint32_t*)x, (uint32_t*)a, (uint32_t*)b);
+	uint16_t t = 0;
+	for(int i = 63; i >= 0; i--)
+	{
+		t = ((uint8_t *)a)[i] + ((uint8_t *)b)[i] + (t >> 8);
+		((uint8_t *)x)[i] = t & 0xFF;
+	}
 }
 
 __device__ __forceinline__
@@ -974,20 +980,6 @@ void GOST_E(uint64_t* K, uint64_t* const m, uint64_t *state /* out only */)
 }
 
 __device__
-void GOST_g_0(uint64_t* h, uint64_t* const M)
-{
-	uint64_t K0[8];
-	// GOST_F(0);
-	K0[0] = K0[1] = K0[2] = K0[3] = 0x74a5d4ce2efc83b3;
-	K0[4] = K0[5] = K0[6] = K0[7] = 0x74a5d4ce2efc83b3;
-
-	uint64_t t[8];
-	GOST_Xor512(t, M, K0); // t = M ^ K0
-	GOST_E12(K0, t);
-	GOST_Xor512(h, t, M);
-}
-
-__device__
 void GOST_g_N(uint64_t* h, uint64_t* const M, uint64_t* const N)
 {
 	uint64_t K[8];
@@ -1003,31 +995,6 @@ void GOST_g_N(uint64_t* h, uint64_t* const M, uint64_t* const N)
 	GOST_Xor512_3(h, t, M); // h = h ^ t ^ M
 }
 
-__device__
-void GOST_g_1(uint64_t* h, uint64_t* N)
-{
-	uint64_t K[8];
-	GOST_FS(h, K); // K = F(h)
-	GOST_Xor512(h, h, N);
-
-	uint64_t t[8];
-	GOST_E(K, N, t);
-	GOST_Xor512(h, h, t);
-}
-
-__device__
-void GOST_g_F(uint64_t* out, uint64_t* h, uint64_t* M)
-{
-	uint64_t K[8];
-	GOST_FS(h, K); // K = F(h)
-	GOST_Add512(M, M, out);
-
-	uint64_t t[8];
-	GOST_E(K, M, t);
-	GOST_Xor512(t, t, M);
-
-	GOST_Xor512(out, t, h);
-}
 
 __device__ __forceinline__
 void GOST_hash_X(uint64_t *hash, uchar * const message, uint64_t len)
