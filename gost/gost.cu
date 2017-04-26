@@ -13,18 +13,10 @@ extern "C" {
 // GOST CPU Hash
 extern "C" void gosthash(void *output, const void *input)
 {
-	unsigned char _ALIGN(128) hash[128] = { 0 };
+	unsigned char _ALIGN(64) hash[64];
 
-	sph_gost512_context ctx_gost1;
-	sph_gost256_context ctx_gost2;	
-
-	sph_gost512_init(&ctx_gost1);
-	sph_gost512(&ctx_gost1, (const void*) input, 80);
-	sph_gost512_close(&ctx_gost1, (void*) hash);
-
-	sph_gost256_init(&ctx_gost2);
-	sph_gost256(&ctx_gost2, (const void*)hash, 64);
-	sph_gost256_close(&ctx_gost1, (void*) hash);
+	sph_gost512(hash, (const void*)input, 80);
+	sph_gost256(hash, (const void*)hash, 64);
 
 	memcpy(output, hash, 32);
 }
