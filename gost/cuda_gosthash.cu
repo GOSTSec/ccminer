@@ -1056,7 +1056,7 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		// result is first 32 bytes of hash
 
 		// check nonce
-		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_LODWORD(hash[3])), cuda_swab32(_HIDWORD(hash[3]))); // swab uint64_t
+		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_LODWORD(hash[0])), cuda_swab32(_HIDWORD(hash[0]))); // swab uint64_t
 		if (high <= d_target[0]) 
 		{
 			//printf("%08x %08x - %016llx %016llx - %08x %08x\n", buf[7], buf[6], high, d_target[0], c_target[1], c_target[0]);
