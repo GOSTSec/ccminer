@@ -572,6 +572,7 @@ void GOST_Add512(void *x, void * const a, void * const b)
 {
 	//ADD_ASM_512_32((uint32_t*)x, (uint32_t*)a, (uint32_t*)b);
 	uint16_t t = 0;
+	#pragma unroll
 	for(int i = 63; i >= 0; i--)
 	{
 		t = ((uint8_t *)a)[i] + ((uint8_t *)b)[i] + (t >> 8);
@@ -1056,8 +1057,7 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		// result is first 32 bytes of hash
 
 		// check nonce
-		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_LODWORD(hash[0])), cuda_swab32(_HIDWORD(hash[0]))); // swab uint64_t
-		if (high <= d_target[0]) 
+		if (hash[0] <= d_target[0]) 
 		{
 			//printf("%08x %08x - %016llx %016llx - %08x %08x\n", buf[7], buf[6], high, d_target[0], c_target[1], c_target[0]);
 			resNonces[1] = atomicExch(resNonces, nonce);
