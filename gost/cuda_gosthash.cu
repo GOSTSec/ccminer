@@ -1056,9 +1056,10 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		GOST_hash_X(hash, (uchar *)hash1, 512); // 64 bytes
 		// result is first 32 bytes of hash
 
+		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_HIDWORD(hash[0])), cuda_swab32(_LODWORD(hash[0]))); // swab uint64_t and invert
 		// check nonce
-		if (hash[0] <= d_target[0]) 
-		{
+		if (high <= d_target[0]) 
+		{		
 			//printf("%08x %08x - %016llx %016llx - %08x %08x\n", buf[7], buf[6], high, d_target[0], c_target[1], c_target[0]);
 			resNonces[1] = atomicExch(resNonces, nonce);
 			//d_target[0] = high;
@@ -1083,10 +1084,7 @@ void gostd_free(int thr_id)
 __host__
 void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 {
-	uint32_t buf[19];
-	for (int i=0;i<19;i++) buf[i] = cuda_swab32(pdata[i]);
-
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header, buf, 76, 0, cudaMemcpyHostToDevice));
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header, pdata, 76, 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
 }
 

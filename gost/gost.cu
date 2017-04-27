@@ -74,25 +74,29 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			uint32_t _ALIGN(64) vhash[8];
 
-			endiandata[19] = swab32(work->nonces[0]);
+			endiandata[19] = work->nonces[0];
 			gosthash(vhash, endiandata);
-			if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+			if (vhash[0] <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
+			{
 				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
-				if (work->nonces[1] != UINT32_MAX) {
-					endiandata[19] = swab32(work->nonces[1]);
+				if (work->nonces[1] != UINT32_MAX) 
+				{
+					endiandata[19] = work->nonces[1];
 					gosthash(vhash, endiandata);
-					if (vhash[7] <= ptarget[7] && fulltest(vhash, ptarget)) {
+					if (vhash[0] <= ptarget[7] && fulltest(vhash, ptarget))
+					{
 						work->valid_nonces++;
 						bn_set_target_ratio(work, vhash, 1);
 					}
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
-				} else {
+				} 
+				else 
 					pdata[19] = work->nonces[0] + 1;
-				}
 				return work->valid_nonces;
 			}
-			else if (vhash[7] > ptarget[7]) {
+			else if (vhash[0] > ptarget[7]) 
+			{
 				gpu_increment_reject(thr_id);
 				if (!opt_quiet)
 					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
