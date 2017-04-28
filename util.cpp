@@ -2240,7 +2240,7 @@ void print_hash_tests(void)
 	sibhash(&hash[0], &buf[0]);
 	printpfx("sib", hash);
 
-	gosthash(&hash[0], &buf[0]);
+	gostd_hash(&hash[0], &buf[0]);
 	printpfx("gost", hash);
 
 	skeincoinhash(&hash[0], &buf[0]);

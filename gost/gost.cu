@@ -11,7 +11,7 @@ extern "C" {
 #define NBN 2
 
 // GOST CPU Hash
-extern "C" void gosthash(void *output, const void *input)
+extern "C" void gostd_hash(void *output, const void *input)
 {
 	unsigned char _ALIGN(64) hash[64];
 
@@ -32,7 +32,7 @@ extern void gostd_free(int thr_id);
 extern void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget);
 extern void gostd_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces);
 
-extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_gostd(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t _ALIGN(64) endiandata[20];
 	uint32_t *pdata = work->data;
@@ -76,7 +76,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 			uint32_t _ALIGN(64) vhash[8];
 
 			endiandata[19] = swab32 (work->nonces[0]);
-			gosthash(vhash, endiandata);
+			gostd_hash(vhash, endiandata);
 			if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
 			{
 				work->valid_nonces = 1;
@@ -84,7 +84,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 				if (work->nonces[1] != UINT32_MAX) 
 				{
 					endiandata[19] = swab32 (work->nonces[1]);
-					gosthash(vhash, endiandata);
+					gostd_hash(vhash, endiandata);
 					if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/)
 					{
 						work->valid_nonces++;

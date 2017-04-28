@@ -236,7 +236,7 @@ Options:\n\
 			dmd-gr      Diamond-Groestl\n\
 			fresh       Freshcoin (shavite 80)\n\
 			fugue256    Fuguecoin\n\
-			gost		GOST\n\
+			gostd		GOSTd (GOSTcoin)\n\
 			groestl     Groestlcoin\n\
 			heavy       Heavycoin\n\
 			hmq1725     Doubloons / Espers\n\
@@ -2111,7 +2111,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_DECRED:
 			case ALGO_SHA256D:
 			case ALGO_SHA256T:
-			case ALGO_GOST:
+			case ALGO_GOSTD:
 			//case ALGO_WHIRLPOOLX:
 				minmax = 0x40000000U;
 				break;
@@ -2325,8 +2325,8 @@ static void *miner_thread(void *userdata)
 		case ALGO_SIB:
 			rc = scanhash_sib(thr_id, &work, max_nonce, &hashes_done);
 			break;
-		case ALGO_GOST:
-			rc = scanhash_gost(thr_id, &work, max_nonce, &hashes_done);
+		case ALGO_GOSTD:
+			rc = scanhash_gostd(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_S3:
 			rc = scanhash_s3(thr_id, &work, max_nonce, &hashes_done);
