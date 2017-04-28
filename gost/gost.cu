@@ -37,6 +37,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 	uint32_t _ALIGN(64) endiandata[20];
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
+	//ptarget[7] = 0x000000FF;
 	const uint32_t first_nonce = pdata[19];
 	uint32_t throughput = cuda_default_throughput(thr_id, 1U << 25);
 	if (init[thr_id]) throughput = min(throughput, (max_nonce - first_nonce));
@@ -76,7 +77,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 
 			endiandata[19] = work->nonces[0];
 			gosthash(vhash, endiandata);
-			if (vhash[0] <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
+			if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
 			{
 				work->valid_nonces = 1;
 				work_set_target_ratio(work, vhash);
@@ -84,23 +85,23 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 				{
 					endiandata[19] = work->nonces[1];
 					gosthash(vhash, endiandata);
-					if (vhash[0] <= ptarget[7] && fulltest(vhash, ptarget))
+					if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/)
 					{
 						work->valid_nonces++;
 						bn_set_target_ratio(work, vhash, 1);
 					}
-					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
+					pdata[19] = max(work->nonces[0], work->nonces[1]);
 				} 
 				else 
-					pdata[19] = work->nonces[0] + 1;
+					pdata[19] = work->nonces[0];
 				return work->valid_nonces;
 			}
-			else if (vhash[0] > ptarget[7]) 
+			else if (swab32(vhash[0]) > ptarget[7]) 
 			{
 				gpu_increment_reject(thr_id);
 				if (!opt_quiet)
 					gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", work->nonces[0]);
-				pdata[19] = work->nonces[0] + 1;
+				pdata[19] = work->nonces[0];
 				continue;
 			}
 		}
