@@ -556,6 +556,45 @@ __device__ static uint64_t T7[256] = {
 	0x717E7067AF4F499A, 0x938290A9ECD1DBB3, 0x88E3B293344DD172, 0x2734158C250FA3D6
 };
 
+// KeySchedule
+__constant__ uint64_t const CC[12][8] = {{
+	0xe9daca1eda5b08b1, 0x1f7c65c0812fcbeb, 0x16d0452e43766a2f, 0xfcc485758db84e71,
+	0x0169679291e07c4b, 0x15d360a4082a42a2, 0x234d74cc36747605, 0x0745a6f2596580dd
+}, {
+	0x1a2f9da98ab5a36f, 0xd7b5700f469de34f, 0x982b230a72eafef3, 0x3101b5160f5ed561,
+	0x5899d6126b17b59a, 0xcaa70adbc261b55c, 0x56cdcbd71ba2dd55, 0xb79bb121700479e6
+}, {
+	0xc72fce2bacdc74f5, 0x35843d6a28fc390a, 0x8b1f9c525f5ef106, 0x7b7b29b11475eaf2,
+	0xb19e3590e40fe2d3, 0x09db6260373ac9c1, 0x31db7a8643f4b6c2, 0xb20aba0af5961e99
+}, {
+	0xd26615e8b3df1fef, 0xdde4715da0e148f9, 0x7d3c5c337e858e48, 0x3f355e68ad1c729d,
+	0x75d603ed822cd7a9, 0xbe0352933313b7d8, 0xf137e893a1ea5334, 0x2ed1e384bcbe0c22
+}, {
+	0x994747adac6bea4b, 0x6323a96c0c413f9a, 0x4a1086161f1c157f, 0xbdff0f80d7359e35,
+	0xa3f53a254717cdbf, 0x161a2723b700ffdf, 0xf563eaa97ea2567a, 0x57fe6c7cfd581760
+}, {
+	0xd9d33a1daeae4fae, 0xc039307a3bc3a46f, 0x6ca44251f9c4662d, 0xc68ef09ab49a7f18,
+	0xb4b79a1cb7a6facf, 0xb6c6bec2661ff20a, 0x354f903672c571bf, 0x6e7d64467a4068fa
+}, {
+	0xecc5aaee160ec7f4, 0x540924bffe86ac51, 0xc987bfe6c7c69e39, 0xc9937a19333e47d3,
+	0x372c822dc5ab9209, 0x04054a2883694706, 0xf34a3ca24c451735, 0x93d4143a4d568688
+}, {
+	0xa7c9934d425b1f9b, 0x41416e0c02aae703, 0x1ede369c71f8b74e, 0x9ac4db4d3b44b489,
+	0x90069b92cb2b89f4, 0x2fc4a5d12b8dd169, 0xd9a8515935c2ac36, 0x1ee702bfd40d7fa4
+}, {
+	0x9b223116545a8f37, 0xde5f16ecd89a4c94, 0x244289251b3a7d3a, 0x84090de0b755d93c,
+	0xb1ceb2db0b440a80, 0x549c07a69a8a2b7b, 0x602a1fcb92dc380e, 0xdb5a238351446172
+}, {
+	0x526f0580a6debeab, 0xf3f3e4b248e52a38, 0xdb788aff1ce74189, 0x0361331b8ae1ff1f,
+	0x4b3369af0267e79f, 0xf452763b306c1e7a, 0xc3b63b15d1fa9836, 0xed9c4598fbc7b474
+}, {
+	0xfb89c8efd09ecd7b, 0x94fe5a63cdc60230, 0x6107abebbb6bfad8, 0x7966841421800120,
+	0xcab948eaef711d8a, 0x986e477d1dcdbaef, 0x5dd86fc04a59a2de, 0x1b2df381cda4ca6b
+}, {
+	0xba3116f167e78e37, 0x7ab14904b08013d2, 0x771ddfbc323ca4cd, 0x9b9f2130d41220f8,
+	0x86cc91189def805d, 0x5228e188aaa41de7, 0x991bb2d9d517f4fa, 0x20d71bf14a92bc48
+}};
+
 __device__ __forceinline__
 void ADD_ASM_512_32(uint32_t* x, uint32_t* const a, uint32_t* const b)
 {
@@ -753,215 +792,6 @@ static void GOST_F(uint64_t* state)
 __device__
 static void GOST_E12(uint64_t* K, uint64_t *state)
 {
-#if 0
-	// First Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xe9daca1eda5b08b1;
-		K[1] ^= 0x1f7c65c0812fcbeb;
-		K[2] ^= 0x16d0452e43766a2f;
-		K[3] ^= 0xfcc485758db84e71;
-		K[4] ^= 0x0169679291e07c4b;
-		K[5] ^= 0x15d360a4082a42a2;
-		K[6] ^= 0x234d74cc36747605;
-		K[7] ^= 0x0745a6f2596580dd;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 2nd Round
-	{
-		GOST_F(state);
-		K[0] ^= 0x1a2f9da98ab5a36f;
-		K[1] ^= 0xd7b5700f469de34f;
-		K[2] ^= 0x982b230a72eafef3;
-		K[3] ^= 0x3101b5160f5ed561;
-		K[4] ^= 0x5899d6126b17b59a;
-		K[5] ^= 0xcaa70adbc261b55c;
-		K[6] ^= 0x56cdcbd71ba2dd55;
-		K[7] ^= 0xb79bb121700479e6;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 3rd Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xc72fce2bacdc74f5;
-		K[1] ^= 0x35843d6a28fc390a;
-		K[2] ^= 0x8b1f9c525f5ef106;
-		K[3] ^= 0x7b7b29b11475eaf2;
-		K[4] ^= 0xb19e3590e40fe2d3;
-		K[5] ^= 0x09db6260373ac9c1;
-		K[6] ^= 0x31db7a8643f4b6c2;
-		K[7] ^= 0xb20aba0af5961e99;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 4th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xd26615e8b3df1fef;
-		K[1] ^= 0xdde4715da0e148f9;
-		K[2] ^= 0x7d3c5c337e858e48;
-		K[3] ^= 0x3f355e68ad1c729d;
-		K[4] ^= 0x75d603ed822cd7a9;
-		K[5] ^= 0xbe0352933313b7d8;
-		K[6] ^= 0xf137e893a1ea5334;
-		K[7] ^= 0x2ed1e384bcbe0c22;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 5th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0x994747adac6bea4b;
-		K[1] ^= 0x6323a96c0c413f9a;
-		K[2] ^= 0x4a1086161f1c157f;
-		K[3] ^= 0xbdff0f80d7359e35;
-		K[4] ^= 0xa3f53a254717cdbf;
-		K[5] ^= 0x161a2723b700ffdf;
-		K[6] ^= 0xf563eaa97ea2567a;
-		K[7] ^= 0x57fe6c7cfd581760;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 6th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xd9d33a1daeae4fae;
-		K[1] ^= 0xc039307a3bc3a46f;
-		K[2] ^= 0x6ca44251f9c4662d;
-		K[3] ^= 0xc68ef09ab49a7f18;
-		K[4] ^= 0xb4b79a1cb7a6facf;
-		K[5] ^= 0xb6c6bec2661ff20a;
-		K[6] ^= 0x354f903672c571bf;
-		K[7] ^= 0x6e7d64467a4068fa;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 7th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xecc5aaee160ec7f4;
-		K[1] ^= 0x540924bffe86ac51;
-		K[2] ^= 0xc987bfe6c7c69e39;
-		K[3] ^= 0xc9937a19333e47d3;
-		K[4] ^= 0x372c822dc5ab9209;
-		K[5] ^= 0x04054a2883694706;
-		K[6] ^= 0xf34a3ca24c451735;
-		K[7] ^= 0x93d4143a4d568688;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 8th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xa7c9934d425b1f9b;
-		K[1] ^= 0x41416e0c02aae703;
-		K[2] ^= 0x1ede369c71f8b74e;
-		K[3] ^= 0x9ac4db4d3b44b489;
-		K[4] ^= 0x90069b92cb2b89f4;
-		K[5] ^= 0x2fc4a5d12b8dd169;
-		K[6] ^= 0xd9a8515935c2ac36;
-		K[7] ^= 0x1ee702bfd40d7fa4;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 9th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0x9b223116545a8f37;
-		K[1] ^= 0xde5f16ecd89a4c94;
-		K[2] ^= 0x244289251b3a7d3a;
-		K[3] ^= 0x84090de0b755d93c;
-		K[4] ^= 0xb1ceb2db0b440a80;
-		K[5] ^= 0x549c07a69a8a2b7b;
-		K[6] ^= 0x602a1fcb92dc380e;
-		K[7] ^= 0xdb5a238351446172;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 10th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0x526f0580a6debeab;
-		K[1] ^= 0xf3f3e4b248e52a38;
-		K[2] ^= 0xdb788aff1ce74189;
-		K[3] ^= 0x0361331b8ae1ff1f;
-		K[4] ^= 0x4b3369af0267e79f;
-		K[5] ^= 0xf452763b306c1e7a;
-		K[6] ^= 0xc3b63b15d1fa9836;
-		K[7] ^= 0xed9c4598fbc7b474;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 11th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xfb89c8efd09ecd7b;
-		K[1] ^= 0x94fe5a63cdc60230;
-		K[2] ^= 0x6107abebbb6bfad8;
-		K[3] ^= 0x7966841421800120;
-		K[4] ^= 0xcab948eaef711d8a;
-		K[5] ^= 0x986e477d1dcdbaef;
-		K[6] ^= 0x5dd86fc04a59a2de;
-		K[7] ^= 0x1b2df381cda4ca6b;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-	// 12th Round
-	{
-		GOST_F(state);
-		K[0] ^= 0xba3116f167e78e37;
-		K[1] ^= 0x7ab14904b08013d2;
-		K[2] ^= 0x771ddfbc323ca4cd;
-		K[3] ^= 0x9b9f2130d41220f8;
-		K[4] ^= 0x86cc91189def805d;
-		K[5] ^= 0x5228e188aaa41de7;
-		K[6] ^= 0x991bb2d9d517f4fa;
-		K[7] ^= 0x20d71bf14a92bc48;
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
-	}
-#else
-	// KeySchedule
-	uint64_t const CC[12][8] = {{
-		0xe9daca1eda5b08b1, 0x1f7c65c0812fcbeb, 0x16d0452e43766a2f, 0xfcc485758db84e71,
-		0x0169679291e07c4b, 0x15d360a4082a42a2, 0x234d74cc36747605, 0x0745a6f2596580dd
-	}, {
-		0x1a2f9da98ab5a36f, 0xd7b5700f469de34f, 0x982b230a72eafef3, 0x3101b5160f5ed561,
-		0x5899d6126b17b59a, 0xcaa70adbc261b55c, 0x56cdcbd71ba2dd55, 0xb79bb121700479e6
-	}, {
-		0xc72fce2bacdc74f5, 0x35843d6a28fc390a, 0x8b1f9c525f5ef106, 0x7b7b29b11475eaf2,
-		0xb19e3590e40fe2d3, 0x09db6260373ac9c1, 0x31db7a8643f4b6c2, 0xb20aba0af5961e99
-	}, {
-		0xd26615e8b3df1fef, 0xdde4715da0e148f9, 0x7d3c5c337e858e48, 0x3f355e68ad1c729d,
-		0x75d603ed822cd7a9, 0xbe0352933313b7d8, 0xf137e893a1ea5334, 0x2ed1e384bcbe0c22
-	}, {
-		0x994747adac6bea4b, 0x6323a96c0c413f9a, 0x4a1086161f1c157f, 0xbdff0f80d7359e35,
-		0xa3f53a254717cdbf, 0x161a2723b700ffdf, 0xf563eaa97ea2567a, 0x57fe6c7cfd581760
-	}, {
-		0xd9d33a1daeae4fae, 0xc039307a3bc3a46f, 0x6ca44251f9c4662d, 0xc68ef09ab49a7f18,
-		0xb4b79a1cb7a6facf, 0xb6c6bec2661ff20a, 0x354f903672c571bf, 0x6e7d64467a4068fa
-	}, {
-		0xecc5aaee160ec7f4, 0x540924bffe86ac51, 0xc987bfe6c7c69e39, 0xc9937a19333e47d3,
-		0x372c822dc5ab9209, 0x04054a2883694706, 0xf34a3ca24c451735, 0x93d4143a4d568688
-	}, {
-		0xa7c9934d425b1f9b, 0x41416e0c02aae703, 0x1ede369c71f8b74e, 0x9ac4db4d3b44b489,
-		0x90069b92cb2b89f4, 0x2fc4a5d12b8dd169, 0xd9a8515935c2ac36, 0x1ee702bfd40d7fa4
-	}, {
-		0x9b223116545a8f37, 0xde5f16ecd89a4c94, 0x244289251b3a7d3a, 0x84090de0b755d93c,
-		0xb1ceb2db0b440a80, 0x549c07a69a8a2b7b, 0x602a1fcb92dc380e, 0xdb5a238351446172
-	}, {
-		0x526f0580a6debeab, 0xf3f3e4b248e52a38, 0xdb788aff1ce74189, 0x0361331b8ae1ff1f,
-		0x4b3369af0267e79f, 0xf452763b306c1e7a, 0xc3b63b15d1fa9836, 0xed9c4598fbc7b474
-	}, {
-		0xfb89c8efd09ecd7b, 0x94fe5a63cdc60230, 0x6107abebbb6bfad8, 0x7966841421800120,
-		0xcab948eaef711d8a, 0x986e477d1dcdbaef, 0x5dd86fc04a59a2de, 0x1b2df381cda4ca6b
-	}, {
-		0xba3116f167e78e37, 0x7ab14904b08013d2, 0x771ddfbc323ca4cd, 0x9b9f2130d41220f8,
-		0x86cc91189def805d, 0x5228e188aaa41de7, 0x991bb2d9d517f4fa, 0x20d71bf14a92bc48
-	}};
-
 	//#pragma unroll 1
 	for(int i=0; i<12; i++)
 	{
@@ -970,7 +800,6 @@ static void GOST_E12(uint64_t* K, uint64_t *state)
 		GOST_F(K);
 		GOST_Xor512(state, state, K);
 	}
-#endif
 }
 
 __device__
@@ -1052,7 +881,7 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		GOST_hash_X(hash1, (uchar*)dat, 640); // 80 bytes
 		uint64_t hash[8];
 		#pragma unroll
-		for (int i=0; i<64; i++) ((uchar *)hash)[i] = 1; // iv for 256
+		for (int i=0; i< 8; i++) hash[i] = 0x0101010101010101; // iv for 256
 		GOST_hash_X(hash, (uchar *)hash1, 512); // 64 bytes
 		// result is first 32 bytes of hash
 
