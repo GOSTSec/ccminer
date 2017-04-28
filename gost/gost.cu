@@ -75,7 +75,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 		{
 			uint32_t _ALIGN(64) vhash[8];
 
-			endiandata[19] = work->nonces[0];
+			endiandata[19] = swab32 (work->nonces[0]);
 			gosthash(vhash, endiandata);
 			if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
 			{
@@ -83,7 +83,7 @@ extern "C" int scanhash_gost(int thr_id, struct work* work, uint32_t max_nonce, 
 				work_set_target_ratio(work, vhash);
 				if (work->nonces[1] != UINT32_MAX) 
 				{
-					endiandata[19] = work->nonces[1];
+					endiandata[19] = swab32 (work->nonces[1]);
 					gosthash(vhash, endiandata);
 					if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/)
 					{

@@ -1047,7 +1047,7 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		uint32_t dat[20];
 		#pragma unroll
 		for (int i = 0; i < 19; i++) dat[i] = c_header[i];
-		dat[19] = nonce;
+		dat[19] = cuda_swab32 (nonce);
 		uint64_t hash1[8] = { 0 }; //iv	for 512
 		GOST_hash_X(hash1, (uchar*)dat, 640); // 80 bytes
 		uint64_t hash[8];
