@@ -920,7 +920,7 @@ void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 __host__
 void gostd_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces)
 {
-	const uint32_t threadsperblock = 256;
+	const uint32_t threadsperblock = 128;
 
 	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock);
