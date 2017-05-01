@@ -802,6 +802,7 @@ static void GOST_F(uint64_t* state)
 	GOST_Copy512(state, t);
 }
 
+
 __device__
 static void GOST_E12(uint64_t* K, uint64_t *state)
 {
@@ -839,6 +840,18 @@ void GOST_g_N(uint64_t* h, uint64_t* const M, uint64_t* const N)
 }
 
 
+__device__
+void GOST_g_0(uint64_t* h, uint64_t* const M)
+{
+	uint64_t K[8];
+	GOST_FS(h, K);
+
+	uint64_t t[8];
+	GOST_E(K, M, t);
+
+	GOST_Xor512_3(h, t, M); // h = h ^ t ^ M 
+}
+
 __device__ __forceinline__
 void GOST_hash_X(uint64_t *hash, uint64_t * const message, uint32_t len) // always 2 blocks of 64 bytes, len is length of first block in bits (either 0 or 128)
 {
@@ -846,7 +859,7 @@ void GOST_hash_X(uint64_t *hash, uint64_t * const message, uint32_t len) // alwa
 	uint64_t N[8] = { 0 };
 
 	// second block	
-	GOST_g_N(hash, message + 8, N);
+	GOST_g_0(hash, message + 8);
 	GOST_Add32 (N, 512);	
 	GOST_Add512(Sigma, Sigma, message + 8);
 
@@ -855,9 +868,8 @@ void GOST_hash_X(uint64_t *hash, uint64_t * const message, uint32_t len) // alwa
 	GOST_Add32 (N, len); 
 	GOST_Add512(Sigma, Sigma, message);
 
-	uint64_t M[8] = { 0 };
-	GOST_g_N(hash, N, M);
-	GOST_g_N(hash, Sigma, M);
+	GOST_g_0(hash, N);
+	GOST_g_0(hash, Sigma);
 }
 
 __global__
