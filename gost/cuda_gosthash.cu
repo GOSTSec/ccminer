@@ -557,7 +557,7 @@ __device__ static uint64_t T7[256] = {
 };
 
 // KeySchedule
-__constant__ uint64_t const CC[12][8] = {{
+__constant__ static uint64_t CC[12][8] = {{
 	0xe9daca1eda5b08b1, 0x1f7c65c0812fcbeb, 0x16d0452e43766a2f, 0xfcc485758db84e71,
 	0x0169679291e07c4b, 0x15d360a4082a42a2, 0x234d74cc36747605, 0x0745a6f2596580dd
 }, {
@@ -616,6 +616,19 @@ void GOST_Add512(void *x, void * const a, void * const b)
 	{
 		t = ((uint8_t *)a)[i] + ((uint8_t *)b)[i] + (t >> 8);
 		((uint8_t *)x)[i] = t & 0xFF;
+	}
+}
+
+__device__ __forceinline__
+void GOST_Add32 (void * buf, uint32_t c)
+{
+	#pragma unroll
+	for(int i = 63; i >= 59; i--)
+	{
+		if (!c) return;	
+		c += ((uint8_t *)buf)[i];
+		((uint8_t *)buf)[i] = c;
+		c >>= 8;
 	}
 }
 
@@ -827,37 +840,33 @@ void GOST_g_N(uint64_t* h, uint64_t* const M, uint64_t* const N)
 
 
 __device__ __forceinline__
-void GOST_hash_X(uint64_t *hash, uchar * const message, uint64_t len)
+void GOST_hash_X(uint64_t *hash, uchar * const message, uint32_t len)
 {
 	uint64_t Sigma[8] = { 0 };
 	uint64_t N[8] = { 0 };
-	uchar v512[64] = { 0 };
-	v512[62] = 0x02;
 
 	// Stage 2
-	while (len >= 512)
+	while (len >= 64)
 	{
 		uint64_t X[8];
-		memcpy(X, message + len/8 - 63 - ( (len & 0x7) == 0 ), 64);
+		memcpy(X, message + len - 64, 64);
 
 		GOST_g_N(hash, X, N);
-		GOST_Add512(N, N, v512);
+		GOST_Add32 (N, 512);	
 		GOST_Add512(Sigma, Sigma, X);
-		len -= 512;
+		len -= 64;
 	}
 
 	uint64_t M[8];
 	uchar* m = (uchar*) M;
-	memset(m, 0, 64);
-	memcpy(m + 63 - len/8 + ( (len & 0x7) == 0 ), message, len/8 + 1 - ( (len & 0x7) == 0 ));
+	uint32_t padding = 64 - len;
+	memset(m, 0, padding - 1);
+	m[padding - 1] = 1;
+	memcpy (m + padding, message, len);
 
 	// Stage 3 (Close)
-	m[ 63 - len/8 ] |= (1 << (len & 0x7));
-
 	GOST_g_N(hash, M, N);
-	v512[63] = len & 0xFF;
-	v512[62] = len >> 8;
-	GOST_Add512(N, N, v512);
+	GOST_Add32 (N, len << 3); // len*8
 	GOST_Add512(Sigma, Sigma, M);
 
 	memset(M, 0, 64);
@@ -878,11 +887,11 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		for (int i = 0; i < 19; i++) dat[i] = c_header[i];
 		dat[19] = cuda_swab32 (nonce);
 		uint64_t hash1[8] = { 0 }; //iv	for 512
-		GOST_hash_X(hash1, (uchar*)dat, 640); // 80 bytes
+		GOST_hash_X(hash1, (uchar*)dat, 80); // 80 bytes
 		uint64_t hash[8];
 		#pragma unroll
 		for (int i=0; i< 8; i++) hash[i] = 0x0101010101010101; // iv for 256
-		GOST_hash_X(hash, (uchar *)hash1, 512); // 64 bytes
+		GOST_hash_X(hash, (uchar *)hash1, 64); // 64 bytes
 		// result is first 32 bytes of hash
 
 		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_HIDWORD(hash[0])), cuda_swab32(_LODWORD(hash[0]))); // swab uint64_t and invert
