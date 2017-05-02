@@ -620,19 +620,6 @@ void GOST_Add512(void *x, void * const a, void * const b)
 }
 
 __device__ __forceinline__
-void GOST_Add32 (void * buf, uint32_t c)
-{
-	#pragma unroll
-	for(int i = 63; i >= 59; i--)
-	{
-		if (!c) return;	
-		c += ((uint8_t *)buf)[i];
-		((uint8_t *)buf)[i] = c;
-		c >>= 8;
-	}
-}
-
-__device__ __forceinline__
 void GOST_Copy512(uint64_t* dst, uint64_t* const __restrict__ src)
 {
 	#pragma unroll
@@ -855,21 +842,19 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 __device__ __forceinline__
 void GOST_hash_X(uint64_t *hash, uint64_t * const message, uint32_t len) // always 2 blocks of 64 bytes, len is length of first block in bits (either 0 or 128)
 {
-	uint64_t Sigma[8] = { 0 };
 	uint64_t N[8] = { 0 };
 
 	// second block	
 	GOST_g_0(hash, message + 8);
-	GOST_Add32 (N, 512);	
-	GOST_Add512(Sigma, Sigma, message + 8);
+	N[7] = 0x0002000000000000; // 512 
 
 	// first block
 	GOST_g_N(hash, message, N);
-	GOST_Add32 (N, len); 
-	GOST_Add512(Sigma, Sigma, message);
+	((uint8_t *)N)[63] = len; // +=128 or 0 
 
 	GOST_g_0(hash, N);
-	GOST_g_0(hash, Sigma);
+	GOST_Add512(N, message + 8, message); // Sigma
+	GOST_g_0(hash, N);
 }
 
 __global__
