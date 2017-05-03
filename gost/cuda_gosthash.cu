@@ -840,6 +840,19 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 	GOST_Xor512_3(h, t, M); // h = h ^ t ^ M 
 }
 
+__device__
+void GOST_g_0_0(uint64_t* h, uint64_t* const M) // input h assumed zero, for iv 512
+{
+	uint64_t K0[8];
+	#pragma unroll
+	for(int i = 0; i < 8; i++) K0[i] = 0x74a5d4ce2efc83b3; // GOST_F(0)
+
+	uint64_t t[8];
+	GOST_E(K0, M, t);
+
+	GOST_Xor512 (h, t, M); // h = t ^ M 
+}
+
 __global__
 /*__launch_bounds__(256,3)*/
 void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
@@ -855,9 +868,9 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 		#pragma unroll	
 		for (int i = 0; i < 8; i++) block2[i] = c_header2[i];
 		((uint32_t *)block2)[15] = cuda_swab32 (nonce); // change nonce
-		uint64_t __align__(8) hash1[8] = { 0 }; // ivfor 512
+		uint64_t __align__(8) hash1[8] = { 0 }; // iv for 512
 		// second block	
-		GOST_g_0(hash1, block2);
+		GOST_g_0_0 (hash1, block2); // zero iv assumed
 		N[7] = 0x0002000000000000; // 512 
 		// first block
 		GOST_g_N(hash1, c_header1 + 2, N);
