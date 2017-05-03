@@ -15,7 +15,9 @@
 typedef unsigned char uchar;
 
 static uint32_t* d_resNonces[MAX_GPUS] = { 0 };
-__constant__ static uint32_t __align__(8) c_header[19];
+__constant__ static uint64_t __align__(8) c_header1[10], c_header2[8]; // two blocks
+// c_header1 +2 is leading zero,1 and first 16 bytes of header for first hash
+// c_headse1 is leading zero and 1 for second hash 
 __device__ uint64_t d_target[1];
 
 //#define FULL_UNROLL
@@ -840,20 +842,20 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 }
 
 __device__ __forceinline__
-void GOST_hash_X(uint64_t *hash, uint64_t * const message, uint32_t len) // always 2 blocks of 64 bytes, len is length of first block in bits (either 0 or 128)
+void GOST_hash_X(uint64_t *hash, uint64_t * const block1,  uint64_t * const block2, uint32_t len) // always 2 blocks of 64 bytes, len is length of first block in bits (either 0 or 128)
 {
 	uint64_t N[8] = { 0 };
 
 	// second block	
-	GOST_g_0(hash, message + 8);
+	GOST_g_0(hash, block2);
 	N[7] = 0x0002000000000000; // 512 
 
 	// first block
-	GOST_g_N(hash, message, N);
+	GOST_g_N(hash, block1, N);
 	((uint8_t *)N)[63] = len; // +=128 or 0 
 
 	GOST_g_0(hash, N);
-	GOST_Add512(N, message + 8, message); // Sigma
+	GOST_Add512(N, block2, block1); // Sigma
 	GOST_g_0(hash, N);
 }
 
@@ -866,24 +868,19 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 	{
 		const uint32_t nonce = startNonce + thread;
 		// first hash (GOST 34.11-512 over 80 bytes)
-		uint32_t __align__(8) dat[32];
-		// fill first 48 bytes and leading 1
-		#pragma unroll
-		for (int i = 0; i < 11; i++) dat[i] = 0;
-		dat[11] = 0x01000000;
-		// copy actual header
+		uint64_t __align__(8) dat2[8];
+		// copy second block of header
 		#pragma unroll	
-		for (int i = 0; i < 19; i++) dat[i + 12] = c_header[i];
-		dat[19 + 12] = cuda_swab32 (nonce);
-		uint64_t hash1[16] = { 0 }; // iv	for 512
-		hash1[7] = 0x0100000000000000; // set leading 1
-		GOST_hash_X(hash1 + 8, (uint64_t *)dat, 128); 
-
+		for (int i = 0; i < 8; i++) dat2[i] = c_header2[i];
+		((uint32_t *)dat2)[15] = cuda_swab32 (nonce); // change nonce
+		uint64_t hash1[8] = { 0 }; // iv	for 512
+		GOST_hash_X(hash1, c_header1 + 2, dat2, 128);
+	
 		// second hash (GOST 34.11-256 over 64 bytes)
 		uint64_t hash[8];
 		#pragma unroll
 		for (int i=0; i< 8; i++) hash[i] = 0x0101010101010101; // iv for 256
-		GOST_hash_X(hash, hash1, 0); 
+		GOST_hash_X(hash, c_header1, hash1, 0); 
 		// result is first 32 bytes of hash
 
 		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_HIDWORD(hash[0])), cuda_swab32(_LODWORD(hash[0]))); // swab uint64_t and invert
@@ -914,7 +911,13 @@ void gostd_free(int thr_id)
 __host__
 void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 {
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header, pdata, 76, 0, cudaMemcpyHostToDevice));
+	// fill first 48 bytes, leading 1 and first 16 bytes for header 	
+	uint8_t dat1[80] = {0};
+	dat1[63] = 1;
+	memcpy (dat1 + 64, pdata, 16); 
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header1, dat1, 80, 0, cudaMemcpyHostToDevice));
+	// other 64 bytes, but since we set nonce later on we don't copy it	
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header2, pdata + 4, 60, 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
 }
 
