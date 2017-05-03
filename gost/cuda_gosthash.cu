@@ -6,7 +6,7 @@
  *
  * ==========================(LICENSE BEGIN)============================
  *
- * @author   Tanguy Pruvot <tpruvot@github> 2015
+ * @author   Tanguy Pruvot <tpruvot@github> 2015, orignal <orignal@github> 2017 
  */
 #include <stdio.h>
 
@@ -15,9 +15,14 @@
 typedef unsigned char uchar;
 
 static uint32_t* d_resNonces[MAX_GPUS] = { 0 };
-__constant__ static uint64_t __align__(8) c_header1[10], c_header2[8]; // two blocks
-// c_header1 +2 is leading zero,1 and first 16 bytes of header for first hash
-// c_headse1 is leading zero and 1 for second hash 
+__constant__ static uint64_t __align__(8) c_header1[10] = 
+	{
+		0, 0, 0, 0, 0, 0, 0, 0x0100000000000000, 0, 0 
+	},  
+	// c_header1 +2 is leading zero,1 and first 16 bytes of header for first hash
+    // c_header1 is leading zero and 1 for second hash 	
+	c_header2[8]; // second block of 64 bytes
+
 __device__ uint64_t d_target[1];
 
 //#define FULL_UNROLL
@@ -911,11 +916,8 @@ void gostd_free(int thr_id)
 __host__
 void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 {
-	// fill first 48 bytes, leading 1 and first 16 bytes for header 	
-	uint8_t dat1[80] = {0};
-	dat1[63] = 1;
-	memcpy (dat1 + 64, pdata, 16); 
-	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header1, dat1, 80, 0, cudaMemcpyHostToDevice));
+	// copy first 16 bytes to the end of c_header1	
+	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header1, pdata, 16, 64, cudaMemcpyHostToDevice));
 	// other 64 bytes, but since we set nonce later on we don't copy it	
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_header2, pdata + 4, 60, 0, cudaMemcpyHostToDevice));
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(d_target, &ptarget[6], 8, 0, cudaMemcpyHostToDevice));
