@@ -27,12 +27,6 @@ __device__ uint64_t d_target[1];
 
 //#define FULL_UNROLL
 
-#define memcpy(dst, src, len) { \
-	for (int i = 0; i < len; i++) { \
-		*((uchar*)dst + i) = *((uchar*)src + i); \
-	} \
-}
-
 // Tables for function F
 __device__ static uint64_t T0[256] = {
 	0xE6F87E5C5B711FD0, 0x258377800924FA16, 0xC849E07E852EA4A8, 0x5B4686A18F06C16A,
@@ -846,24 +840,6 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 	GOST_Xor512_3(h, t, M); // h = h ^ t ^ M 
 }
 
-__device__ __forceinline__
-void GOST_hash_X(uint64_t *hash, uint64_t * const block1,  uint64_t * const block2, uint32_t len) // always 2 blocks of 64 bytes, len is length of first block in bits (either 0 or 128)
-{
-	uint64_t N[8] = { 0 };
-
-	// second block	
-	GOST_g_0(hash, block2);
-	N[7] = 0x0002000000000000; // 512 
-
-	// first block
-	GOST_g_N(hash, block1, N);
-	((uint8_t *)N)[63] = len; // +=128 or 0 
-
-	GOST_g_0(hash, N);
-	GOST_Add512(N, block2, block1); // Sigma
-	GOST_g_0(hash, N);
-}
-
 __global__
 /*__launch_bounds__(256,3)*/
 void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
@@ -872,20 +848,36 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
+		uint64_t __align__(8) Sigma[8], __align__(8) N[8] = {0};
 		// first hash (GOST 34.11-512 over 80 bytes)
-		uint64_t __align__(8) dat2[8];
+		uint64_t __align__(8) block2[8];
 		// copy second block of header
 		#pragma unroll	
-		for (int i = 0; i < 8; i++) dat2[i] = c_header2[i];
-		((uint32_t *)dat2)[15] = cuda_swab32 (nonce); // change nonce
-		uint64_t hash1[8] = { 0 }; // iv	for 512
-		GOST_hash_X(hash1, c_header1 + 2, dat2, 128);
-	
+		for (int i = 0; i < 8; i++) block2[i] = c_header2[i];
+		((uint32_t *)block2)[15] = cuda_swab32 (nonce); // change nonce
+		uint64_t __align__(8) hash1[8] = { 0 }; // ivfor 512
+		// second block	
+		GOST_g_0(hash1, block2);
+		N[7] = 0x0002000000000000; // 512 
+		// first block
+		GOST_g_N(hash1, c_header1 + 2, N);
+		N[7] |= 0x8000000000000000; // +128
+		GOST_g_0(hash1, N);
+		GOST_Add512(Sigma, block2, c_header1 + 2); 
+		GOST_g_0(hash1, Sigma);
+			
 		// second hash (GOST 34.11-256 over 64 bytes)
-		uint64_t hash[8];
+		uint64_t __align__(8) hash[8];
 		#pragma unroll
 		for (int i=0; i< 8; i++) hash[i] = 0x0101010101010101; // iv for 256
-		GOST_hash_X(hash, c_header1, hash1, 0); 
+		// second block	
+		GOST_g_0(hash, hash1);
+		N[7] = 0x0002000000000000; // 512 
+		// first block
+		GOST_g_N(hash, c_header1, N);
+		GOST_g_0(hash, N);
+		GOST_Add512(Sigma, hash1, c_header1); 
+		GOST_g_0(hash, Sigma);		
 		// result is first 32 bytes of hash
 
 		uint64_t high = MAKE_ULONGLONG(cuda_swab32(_HIDWORD(hash[0])), cuda_swab32(_LODWORD(hash[0]))); // swab uint64_t and invert
