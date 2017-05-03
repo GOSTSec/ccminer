@@ -25,8 +25,6 @@ __constant__ static uint64_t __align__(8) c_header1[10] =
 
 __device__ uint64_t d_target[1];
 
-//#define FULL_UNROLL
-
 // Tables for function F
 __device__ static uint64_t T0[256] = {
 	0xE6F87E5C5B711FD0, 0x258377800924FA16, 0xC849E07E852EA4A8, 0x5B4686A18F06C16A,
@@ -596,21 +594,10 @@ __constant__ static uint64_t CC[12][8] = {{
 	0x86cc91189def805d, 0x5228e188aaa41de7, 0x991bb2d9d517f4fa, 0x20d71bf14a92bc48
 }};
 
-__device__ __forceinline__
-void ADD_ASM_512_32(uint32_t* x, uint32_t* const a, uint32_t* const b)
-{
-	asm("add.cc.u32 %0, %1, %2;\n\t" : "=r"(x[0]) : "r"(a[0]),"r"(b[0]));
-	#pragma unroll 14
-	for(int i=1; i < 15; i++) {
-		asm("addc.cc.u32 %0, %1, %2;\n\t" : "=r"(x[i]) : "r"(a[i]),"r"(b[i]));
-	}
-	asm("addc.u32 %0, %1, %2;\n\t" : "=r"(x[15]) : "r"(a[15]),"r"(b[15]));
-}
 
 __device__ __forceinline__
 void GOST_Add512(void *x, void * const a, void * const b)
 {
-	//ADD_ASM_512_32((uint32_t*)x, (uint32_t*)a, (uint32_t*)b);
 	uint16_t t = 0;
 	#pragma unroll
 	for(int i = 63; i >= 0; i--)
@@ -639,7 +626,6 @@ void GOST_Copy256(uint64_t* dst, uint64_t* const __restrict__ src)
 __device__ __forceinline__
 void GOST_Xor512(uint64_t* C, uint64_t* const A, const uint64_t* B)
 {
-#if 1
 	C[0] = A[0] ^ B[0];
 	C[1] = A[1] ^ B[1];
 	C[2] = A[2] ^ B[2];
@@ -648,37 +634,15 @@ void GOST_Xor512(uint64_t* C, uint64_t* const A, const uint64_t* B)
 	C[5] = A[5] ^ B[5];
 	C[6] = A[6] ^ B[6];
 	C[7] = A[7] ^ B[7];
-#elif 0
-	/* x = y ^ z */
-	#pragma unroll 8
-	for(int i=0; i < 8; i++) {
-		asm("xor.b64 %0, %1, %2;\n\t" : "=l"(C[i]) : "l"(A[i]), "l"(B[i]));
-	}
-#else
-	for(int i=0; i<8; i++) {
-		C[i] = A[i] ^ B[i];
-	}
-#endif
 }
 
 __device__ __forceinline__
 void GOST_Xor512_3(uint64_t* C, uint64_t* const A, uint64_t* const B)
 {
-#if 0
-	#pragma unroll 8
-	for(int i=0; i < 8; i++) {
-		asm(
-			"xor.b64 %0, %0, %1;\n\t"
-			"xor.b64 %0, %0, %2;\n\t"
-		: "+l"(C[i]) : "l"(A[i]), "l"(B[i])
-		);
-	}
-#else
 	#pragma unroll 8
 	for(int i=0; i<8; i++) {
 		C[i] ^= A[i] ^ B[i];
 	}
-#endif
 }
 
 __device__ __forceinline__
@@ -695,87 +659,7 @@ void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 {
 	uchar* state = (uchar*) state64;
 	uint64_t r;
-#ifdef FULL_UNROLL
-	r  = T0[state[56]];
-	r ^= T1[state[48]];
-	r ^= T2[state[40]];
-	r ^= T3[state[32]];
-	r ^= T4[state[24]];
-	r ^= T5[state[16]];
-	r ^= T6[state[8]];
-	r ^= T7[state[0]];
-	return_state[0] = r;
 
-	r  = T0[state[57]];
-	r ^= T1[state[49]];
-	r ^= T2[state[41]];
-	r ^= T3[state[33]];
-	r ^= T4[state[25]];
-	r ^= T5[state[17]];
-	r ^= T6[state[9]];
-	r ^= T7[state[1]];
-	return_state[1] = r;
-
-	r  = T0[state[58]];
-	r ^= T1[state[50]];
-	r ^= T2[state[42]];
-	r ^= T3[state[34]];
-	r ^= T4[state[26]];
-	r ^= T5[state[18]];
-	r ^= T6[state[10]];
-	r ^= T7[state[2]];
-	return_state[2] = r;
-
-	r  = T0[state[59]];
-	r ^= T1[state[51]];
-	r ^= T2[state[43]];
-	r ^= T3[state[35]];
-	r ^= T4[state[27]];
-	r ^= T5[state[19]];
-	r ^= T6[state[11]];
-	r ^= T7[state[3]];
-	return_state[3] = r;
-
-	r  = T0[state[60]];
-	r ^= T1[state[52]];
-	r ^= T2[state[44]];
-	r ^= T3[state[36]];
-	r ^= T4[state[28]];
-	r ^= T5[state[20]];
-	r ^= T6[state[12]];
-	r ^= T7[state[4]];
-	return_state[4] = r;
-
-	r  = T0[state[61]];
-	r ^= T1[state[53]];
-	r ^= T2[state[45]];
-	r ^= T3[state[37]];
-	r ^= T4[state[29]];
-	r ^= T5[state[21]];
-	r ^= T6[state[13]];
-	r ^= T7[state[5]];
-	return_state[5] = r;
-
-	r  = T0[state[62]];
-	r ^= T1[state[54]];
-	r ^= T2[state[46]];
-	r ^= T3[state[38]];
-	r ^= T4[state[30]];
-	r ^= T5[state[22]];
-	r ^= T6[state[14]];
-	r ^= T7[state[6]];
-	return_state[6] = r;
-
-	r  = T0[state[63]];
-	r ^= T1[state[55]];
-	r ^= T2[state[47]];
-	r ^= T3[state[39]];
-	r ^= T4[state[31]];
-	r ^= T5[state[23]];
-	r ^= T6[state[15]];
-	r ^= T7[state[7]];
-	return_state[7] = r;
-#else
 	for (int b=0; b<8; b++) {
 		r  = T0[state[b+56]];
 		r ^= T1[state[b+48]];
@@ -787,7 +671,6 @@ void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 		r ^= T7[state[b]];
 		return_state[b] = r;
 	}
-#endif
 }
 
 __device__ __forceinline__
