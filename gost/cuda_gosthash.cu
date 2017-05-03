@@ -682,6 +682,15 @@ void GOST_Xor512_3(uint64_t* C, uint64_t* const A, uint64_t* const B)
 }
 
 __device__ __forceinline__
+void GOST_Xor512_c(uint64_t* C, uint64_t* const A, const uint64_t* B, uint64_t c)
+{
+	#pragma unroll 8
+	for(int i=0; i<8; i++) {
+		C[i] = A[i] ^ B[i] ^ c;
+	}
+}
+
+__device__ __forceinline__
 void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 {
 	uchar* state = (uchar*) state64;
@@ -852,6 +861,18 @@ void GOST_g_0_0(uint64_t* h, uint64_t* const M) // input h assumed zero, for iv 
 	GOST_Xor512 (h, t, M); // h = t ^ M 
 }
 
+__device__
+void GOST_g_0_1(uint64_t* h, uint64_t* const M) // input h assumed all bytes one, for iv 256
+{
+	#pragma unroll
+	for(int i = 0; i < 8; i++) h[i] = 0x155f7bb040eec523; // GOST_F(1)
+
+	uint64_t t[8];
+	GOST_E(h, M, t);
+
+	GOST_Xor512_c(h, t, M, 0x0101010101010101); // h = t ^ M ^ 1 
+}
+
 __global__
 /*__launch_bounds__(256,3)*/
 void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
@@ -880,10 +901,8 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 			
 		// second hash (GOST 34.11-256 over 64 bytes)
 		uint64_t __align__(8) hash[8];
-		#pragma unroll
-		for (int i=0; i< 8; i++) hash[i] = 0x0101010101010101; // iv for 256
 		// second block	
-		GOST_g_0(hash, hash1);
+		GOST_g_0_1(hash, hash1); // // iv for 256 assumed (all bytes one)
 		N[7] = 0x0002000000000000; // 512 
 		// first block
 		GOST_g_N(hash, c_header1, N);
