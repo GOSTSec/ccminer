@@ -684,7 +684,7 @@ static void GOST_F(uint64_t* state)
 
 
 __device__
-static void GOST_E12(uint64_t* const K, uint64_t *state)
+static void GOST_E12(uint64_t* K, uint64_t *state)
 {
 	uint64_t state1[8], K1[8];	
 	GOST_Copy512(K1, K);	
@@ -699,7 +699,7 @@ static void GOST_E12(uint64_t* const K, uint64_t *state)
 }
 
 __device__
-void GOST_E(uint64_t* const K, uint64_t* const m, uint64_t *state /* out only */)
+void GOST_E(uint64_t* K, uint64_t* const m, uint64_t *state /* out only */)
 {
 	GOST_Xor512(state, m, K); // state = m ^ K
 	GOST_E12(K, state);
