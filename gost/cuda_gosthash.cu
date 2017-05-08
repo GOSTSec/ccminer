@@ -684,20 +684,22 @@ static void GOST_F(uint64_t* state)
 
 
 __device__
-static void GOST_E12(uint64_t* K, uint64_t *state)
+static void GOST_E12(uint64_t* const K, uint64_t *state)
 {
+	uint64_t state1[8], K1[8];	
+	GOST_Copy512(K1, K);	
 	//#pragma unroll 1
 	for(int i=0; i<12; i++)
 	{
-		GOST_F(state);
-		GOST_Xor512(K, K, CC[i]);
-		GOST_F(K);
-		GOST_Xor512(state, state, K);
+		GOST_FS(state, state1);
+		GOST_Xor512(K, K1, CC[i]);
+		GOST_FS(K, K1);
+		GOST_Xor512(state, state1, K1);
 	}
 }
 
 __device__
-void GOST_E(uint64_t* K, uint64_t* const m, uint64_t *state /* out only */)
+void GOST_E(uint64_t* const K, uint64_t* const m, uint64_t *state /* out only */)
 {
 	GOST_Xor512(state, m, K); // state = m ^ K
 	GOST_E12(K, state);
