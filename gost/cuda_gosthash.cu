@@ -595,6 +595,18 @@ __constant__ static uint64_t CC[12][8] = {{
 }};
 
 
+__constant__ static uint64_t F0[8] = // GOST_F(0)
+{
+	0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3,
+	0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3, 0x74a5d4ce2efc83b3
+};
+
+__constant__ static uint64_t F1[8] = // GOST_F(1)
+{
+	0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523,
+	0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523
+};
+
 __device__ __forceinline__
 void GOST_Add512(void *x, void * const a, void * const b)
 {
@@ -684,22 +696,22 @@ static void GOST_F(uint64_t* state)
 
 
 __device__
-static void GOST_E12(uint64_t* K, uint64_t *state)
+static void GOST_E12(uint64_t* const K, uint64_t *state)
 {
 	uint64_t state1[8], K1[8];	
 	GOST_Copy512(K1, K);	
 	//#pragma unroll 1
 	for(int i=0; i<12; i++)
 	{
+		GOST_Xor512(state1, K1, CC[i]);
+		GOST_FS(state1, K1);
 		GOST_FS(state, state1);
-		GOST_Xor512(K, K1, CC[i]);
-		GOST_FS(K, K1);
 		GOST_Xor512(state, state1, K1);
 	}
 }
 
 __device__
-void GOST_E(uint64_t* K, uint64_t* const m, uint64_t *state /* out only */)
+void GOST_E(uint64_t* const K, uint64_t* const m, uint64_t *state /* out only */)
 {
 	GOST_Xor512(state, m, K); // state = m ^ K
 	GOST_E12(K, state);
@@ -737,25 +749,15 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 __device__
 void GOST_g_0_0(uint64_t* h, uint64_t* const M) // input h assumed zero, for iv 512
 {
-	#pragma unroll
-	for(int i = 0; i < 8; i++) h[i] = 0x74a5d4ce2efc83b3; // GOST_F(0)
-
-	uint64_t t[8];
-	GOST_E(h, M, t);
-
-	GOST_Xor512 (h, t, M); // h = t ^ M 
+	GOST_E(F0, M, h); 
+	GOST_Xor512 (h, h, M); // h = h ^ M 
 }
 
 __device__
 void GOST_g_0_1(uint64_t* h, uint64_t* const M) // input h assumed all bytes one, for iv 256
 {
-	#pragma unroll
-	for(int i = 0; i < 8; i++) h[i] = 0x155f7bb040eec523; // GOST_F(1)
-
-	uint64_t t[8];
-	GOST_E(h, M, t);
-
-	GOST_Xor512_c(h, t, M, 0x0101010101010101); // h = t ^ M ^ 1 
+	GOST_E(F1, M, h);
+	GOST_Xor512_c(h, h, M, 0x0101010101010101); // h = h ^ M ^ 1 
 }
 
 __global__
