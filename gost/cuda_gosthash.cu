@@ -666,22 +666,39 @@ void GOST_Xor512_c(uint64_t* C, uint64_t* const A, const uint64_t* B, uint64_t c
 	}
 }
 
+
+#define EXTRACT_BYTE(x,i) __byte_perm(x,0,0x4440 + i)
+
 __device__ __forceinline__
 void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 {
-	uchar* state = (uchar*) state64;
+	uint32_t * state32 = (uint32_t *)state64;
 	uint64_t r;
 
-	for (int b=0; b<8; b++) {
-		r  = T0[state[b+56]];
-		r ^= T1[state[b+48]];
-		r ^= T2[state[b+40]];
-		r ^= T3[state[b+32]];
-		r ^= T4[state[b+24]];
-		r ^= T5[state[b+16]];
-		r ^= T6[state[b+8]];
-		r ^= T7[state[b]];
+	#pragma unroll 4
+	for (int b=0; b<4; b++) {
+		r  = T0[EXTRACT_BYTE(state32[14], b)];
+		r ^= T1[EXTRACT_BYTE(state32[12], b)];
+		r ^= T2[EXTRACT_BYTE(state32[10], b)];
+		r ^= T3[EXTRACT_BYTE(state32[8], b)];
+		r ^= T4[EXTRACT_BYTE(state32[6], b)];
+		r ^= T5[EXTRACT_BYTE(state32[4], b)];
+		r ^= T6[EXTRACT_BYTE(state32[2], b)];
+		r ^= T7[EXTRACT_BYTE(state32[0], b)];
 		return_state[b] = r;
+	}
+
+	#pragma unroll 4
+	for (int b=0; b<4; b++) {
+		r  = T0[EXTRACT_BYTE(state32[15], b)];
+		r ^= T1[EXTRACT_BYTE(state32[13], b)];
+		r ^= T2[EXTRACT_BYTE(state32[11], b)];
+		r ^= T3[EXTRACT_BYTE(state32[9], b)];
+		r ^= T4[EXTRACT_BYTE(state32[7], b)];
+		r ^= T5[EXTRACT_BYTE(state32[5], b)];
+		r ^= T6[EXTRACT_BYTE(state32[3], b)];
+		r ^= T7[EXTRACT_BYTE(state32[1], b)];
+		return_state[b+4] = r;
 	}
 }
 
