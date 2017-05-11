@@ -711,9 +711,14 @@ __device__
 static void GOST_E12(uint64_t* const K, uint64_t *state)
 {
 	uint64_t state1[8], K1[8];	
-	GOST_Copy512(K1, K);	
-	#pragma unroll 4
-	for(int i=0; i<12; i++)
+
+	GOST_Xor512(state1, K, CC[0]);
+	GOST_FS(state1, K1);
+	GOST_FS(state, state1);
+	GOST_Xor512(state, state1, K1);
+
+	#pragma unroll 5
+	for(int i=1; i<12; i++)
 	{
 		GOST_Xor512(state1, K1, CC[i]);
 		GOST_FS(state1, K1);
