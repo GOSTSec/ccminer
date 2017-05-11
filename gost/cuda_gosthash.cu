@@ -673,32 +673,27 @@ __device__ __forceinline__
 void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 {
 	uint32_t * state32 = (uint32_t *)state64;
-	uint64_t r;
 
 	#pragma unroll 4
-	for (int b=0; b<4; b++) {
-		r  = T0[EXTRACT_BYTE(state32[14], b)];
-		r ^= T1[EXTRACT_BYTE(state32[12], b)];
-		r ^= T2[EXTRACT_BYTE(state32[10], b)];
-		r ^= T3[EXTRACT_BYTE(state32[8], b)];
-		r ^= T4[EXTRACT_BYTE(state32[6], b)];
-		r ^= T5[EXTRACT_BYTE(state32[4], b)];
-		r ^= T6[EXTRACT_BYTE(state32[2], b)];
-		r ^= T7[EXTRACT_BYTE(state32[0], b)];
-		return_state[b] = r;
-	}
-
-	#pragma unroll 4
-	for (int b=0; b<4; b++) {
-		r  = T0[EXTRACT_BYTE(state32[15], b)];
-		r ^= T1[EXTRACT_BYTE(state32[13], b)];
-		r ^= T2[EXTRACT_BYTE(state32[11], b)];
-		r ^= T3[EXTRACT_BYTE(state32[9], b)];
-		r ^= T4[EXTRACT_BYTE(state32[7], b)];
-		r ^= T5[EXTRACT_BYTE(state32[5], b)];
-		r ^= T6[EXTRACT_BYTE(state32[3], b)];
-		r ^= T7[EXTRACT_BYTE(state32[1], b)];
-		return_state[b+4] = r;
+	for (int b=0; b<4; b++) 
+	{
+		return_state[b]  = T0[EXTRACT_BYTE(state32[14], b)]
+			^ T1[EXTRACT_BYTE(state32[12], b)]
+			^ T2[EXTRACT_BYTE(state32[10], b)]
+			^ T3[EXTRACT_BYTE(state32[8], b)]
+			^ T4[EXTRACT_BYTE(state32[6], b)]
+			^ T5[EXTRACT_BYTE(state32[4], b)]
+			^ T6[EXTRACT_BYTE(state32[2], b)]
+			^ T7[EXTRACT_BYTE(state32[0], b)];
+		
+		return_state[b+4]  = T0[EXTRACT_BYTE(state32[15], b)]
+			^ T1[EXTRACT_BYTE(state32[13], b)]
+			^ T2[EXTRACT_BYTE(state32[11], b)]
+			^ T3[EXTRACT_BYTE(state32[9], b)]
+			^ T4[EXTRACT_BYTE(state32[7], b)]
+			^ T5[EXTRACT_BYTE(state32[5], b)]
+			^ T6[EXTRACT_BYTE(state32[3], b)]
+			^ T7[EXTRACT_BYTE(state32[1], b)];
 	}
 }
 
@@ -853,7 +848,7 @@ void gostd_setBlock_80(uint32_t *pdata, uint32_t *ptarget)
 __host__
 void gostd_hash_80(int thr_id, uint32_t threads, uint32_t startNonce, uint32_t *resNonces)
 {
-	const uint32_t threadsperblock = 128;
+	const uint32_t threadsperblock = 256;
 
 	dim3 grid(threads/threadsperblock);
 	dim3 block(threadsperblock);
