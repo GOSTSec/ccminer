@@ -712,7 +712,7 @@ static void GOST_E12(uint64_t* const K, uint64_t *state)
 {
 	uint64_t state1[8], K1[8];	
 	GOST_Copy512(K1, K);	
-	//#pragma unroll 1
+	#pragma unroll 4
 	for(int i=0; i<12; i++)
 	{
 		GOST_Xor512(state1, K1, CC[i]);
