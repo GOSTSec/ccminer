@@ -555,6 +555,16 @@ __device__ static uint64_t T7[256] = {
 	0x717E7067AF4F499A, 0x938290A9ECD1DBB3, 0x88E3B293344DD172, 0x2734158C250FA3D6
 };
 
+// local copy of T0..T7 for each block
+__shared__ static uint64_t T0S[256];
+__shared__ static uint64_t T1S[256];
+__shared__ static uint64_t T2S[256];
+__shared__ static uint64_t T3S[256];
+__shared__ static uint64_t T4S[256];
+__shared__ static uint64_t T5S[256];
+__shared__ static uint64_t T6S[256];
+__shared__ static uint64_t T7S[256];
+
 // KeySchedule
 __constant__ static uint64_t CC[12][8] = {{
 	0xe9daca1eda5b08b1, 0x1f7c65c0812fcbeb, 0x16d0452e43766a2f, 0xfcc485758db84e71,
@@ -677,23 +687,23 @@ void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 	#pragma unroll 4
 	for (int b=0; b<4; b++) 
 	{
-		return_state[b]  = T0[EXTRACT_BYTE(state32[14], b)]
-			^ T1[EXTRACT_BYTE(state32[12], b)]
-			^ T2[EXTRACT_BYTE(state32[10], b)]
-			^ T3[EXTRACT_BYTE(state32[8], b)]
-			^ T4[EXTRACT_BYTE(state32[6], b)]
-			^ T5[EXTRACT_BYTE(state32[4], b)]
-			^ T6[EXTRACT_BYTE(state32[2], b)]
-			^ T7[EXTRACT_BYTE(state32[0], b)];
+		return_state[b]  = T0S[EXTRACT_BYTE(state32[14], b)]
+			^ T1S[EXTRACT_BYTE(state32[12], b)]
+			^ T2S[EXTRACT_BYTE(state32[10], b)]
+			^ T3S[EXTRACT_BYTE(state32[8], b)]
+			^ T4S[EXTRACT_BYTE(state32[6], b)]
+			^ T5S[EXTRACT_BYTE(state32[4], b)]
+			^ T6S[EXTRACT_BYTE(state32[2], b)]
+			^ T7S[EXTRACT_BYTE(state32[0], b)];
 		
-		return_state[b+4]  = T0[EXTRACT_BYTE(state32[15], b)]
-			^ T1[EXTRACT_BYTE(state32[13], b)]
-			^ T2[EXTRACT_BYTE(state32[11], b)]
-			^ T3[EXTRACT_BYTE(state32[9], b)]
-			^ T4[EXTRACT_BYTE(state32[7], b)]
-			^ T5[EXTRACT_BYTE(state32[5], b)]
-			^ T6[EXTRACT_BYTE(state32[3], b)]
-			^ T7[EXTRACT_BYTE(state32[1], b)];
+		return_state[b+4]  = T0S[EXTRACT_BYTE(state32[15], b)]
+			^ T1S[EXTRACT_BYTE(state32[13], b)]
+			^ T2S[EXTRACT_BYTE(state32[11], b)]
+			^ T3S[EXTRACT_BYTE(state32[9], b)]
+			^ T4S[EXTRACT_BYTE(state32[7], b)]
+			^ T5S[EXTRACT_BYTE(state32[5], b)]
+			^ T6S[EXTRACT_BYTE(state32[3], b)]
+			^ T7S[EXTRACT_BYTE(state32[1], b)];
 	}
 }
 
@@ -782,6 +792,15 @@ __global__
 void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32_t *resNonces)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	// copy table to shared memory, we assume 256 threads per block	
+	T0S[threadIdx.x] = T0[threadIdx.x];
+	T1S[threadIdx.x] = T1[threadIdx.x];
+	T2S[threadIdx.x] = T2[threadIdx.x];
+	T3S[threadIdx.x] = T3[threadIdx.x];
+	T4S[threadIdx.x] = T4[threadIdx.x];
+	T5S[threadIdx.x] = T5[threadIdx.x];
+	T6S[threadIdx.x] = T6[threadIdx.x];
+	T7S[threadIdx.x] = T7[threadIdx.x];	
 	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
