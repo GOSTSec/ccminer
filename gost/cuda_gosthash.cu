@@ -767,13 +767,12 @@ void GOST_E_F0(uint64_t* const m, uint64_t *state /* out only */)
 	GOST_Xor512(state, m, F0); // state = m ^ F0
 	
 	uint64_t state1[8];	
-	#pragma unroll 5
+	#pragma unroll 12
 	for(int i=0; i<12; i++)
 	{
 		GOST_FS(state, state1);
 		GOST_Xor512(state, state1, CC_F0[i]);
 	}
-
 }
 
 __device__
@@ -808,7 +807,7 @@ void GOST_g_0(uint64_t* h, uint64_t* const M)
 __device__
 void GOST_g_0_0(uint64_t* h, uint64_t* const M) // input h assumed zero, for iv 512
 {
-	GOST_E(F0, M, h); 
+	GOST_E_F0 (M, h); 
 	GOST_Xor512 (h, h, M); // h = h ^ M 
 }
 
