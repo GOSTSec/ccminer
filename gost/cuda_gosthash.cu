@@ -634,6 +634,22 @@ __constant__ static uint64_t F1[8] = // GOST_F(1)
 	0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523, 0x155f7bb040eec523
 };
 
+__constant__ static uint64_t CC_F1[12][8] = 
+{
+	{ 0xeaebb276318fee18, 0xea4c693382cbd63b, 0xbf26be88df699734, 0x49a504a9b6fa1c45, 0xb1666aa693de22da, 0x113563ea5e6b7e9c, 0xcdbf01848cd611e6, 0xb95e4a9dc30c7d0c }, 
+	{ 0x919565a231cfa4aa, 0x46fde791cec8ae57, 0xe3c56411e2de27bf, 0x1f9d9e511aba0b94, 0x57773e25f11309ce, 0x2ce14b67cd005091, 0x00fb26ba738ef6c7, 0x2d5f800141af74fd }, 
+	{ 0xf57a17cc650afe61, 0x26d3deadafe23502, 0xf87b7436229a32a5, 0x85459ccaae2842a5, 0x0d3a74dda91e80cd, 0x330e2b60f01ed098, 0x56c16add5dfb6720, 0x8692832019310082 }, 
+	{ 0x6f63d34f5f688399, 0xa826bf5fb7abd51f, 0x3ecb2eaa144393e2, 0x4e7d6cc0863c69e4, 0x61e175af40d59b16, 0xba60d963cd6a540a, 0x69bf99c14c3995d5, 0x5a3de79f30d5a599 }, 
+	{ 0x25f0e72cae7257f0, 0xfdb8c6bc7f9a6c15, 0x326e9413d635e7f1, 0xeaff2028e5942992, 0x1a55b07e905d6162, 0x882060860a9970d1, 0xe2b0cd223cc898af, 0x56a1f7c0137c29be }, 
+	{ 0x4e6e5462c344d15a, 0xb7fb298868e7b346, 0x33741921c3e95374, 0xacb5e26b0e8d2b0b, 0x59f16751b3b69ec8, 0xa659593ea405b0b7, 0x98408efc8cb1a951, 0x8dbbcf819b3df0fc }, 
+	{ 0x8d0aa21b9aec6c6a, 0x2b3534b940a84fb6, 0x2a1230d58e638c51, 0xc9daefb8e02f3383, 0xc709f5a9e5878201, 0x6f42d5dc6a746c8d, 0x3fb7df9057ada0b0, 0xaa6d0139a591f1c1 }, 
+	{ 0xb3a97a7336702199, 0x51bd05f743668d8a, 0xc50f8f941f5351f3, 0xbdd89dee5fa35fe3, 0x9c4e220a589d4cbb, 0xed49fc69200e2ed8, 0x38354437945f7d36, 0x0904ddf5a8b68f2b }, 
+	{ 0x1afa89fcc0636790, 0xda9d9eecd88892e6, 0xfec3d6bfe830769a, 0xafae622e5dc303d7, 0x7f7a31a7805db3f0, 0x916752f22230f876, 0x7b33cb8f67df8fca, 0xd205cb3c39e54fd7 }, 
+	{ 0x648e61636c99ce88, 0x8533e43ee0c8a504, 0xbb9189e6eee32a4e, 0x6edbda389dc2f3bf, 0xdf6ddca6e9daa1d6, 0xd3962f27af34ce52, 0xe1e63f4c628c9c15, 0xd5ad89fc0b5c693d }, 
+	{ 0x0646bda91e280a3e, 0x3a6f57000155ec3e, 0x579182cf68a16a50, 0x382fa3cafc78b976, 0x45ca8299c7305fb5, 0x778479d865838e62, 0x2a119981c6495ae7, 0xdbf255760f5a7b1d }, 
+	{ 0xeb1ab39e4073b2f0, 0x22216718aefb32e4, 0xf9926a2b4248c862, 0x838bd14eb5ba6c3f, 0xa33f1ec5ff1cb214, 0xdb6aef763e43ff19, 0xa17f903ce0f5f90e, 0x03bf0065a0ecf9fc }
+};
+
 __device__ __forceinline__
 void GOST_Add512(void *x, void * const a, void * const b)
 {
@@ -776,6 +792,20 @@ void GOST_E_F0(uint64_t* const m, uint64_t *state /* out only */)
 }
 
 __device__
+void GOST_E_F1(uint64_t* const m, uint64_t *state /* out only */)
+{
+	GOST_Xor512(state, m, F1); // state = m ^ F0
+	
+	uint64_t state1[8];	
+	#pragma unroll 12
+	for(int i=0; i<12; i++)
+	{
+		GOST_FS(state, state1);
+		GOST_Xor512(state, state1, CC_F1[i]);
+	}
+}
+
+__device__
 void GOST_g_N(uint64_t* h, uint64_t* const M, uint64_t* const N)
 {
 	uint64_t K[8];
@@ -814,7 +844,7 @@ void GOST_g_0_0(uint64_t* h, uint64_t* const M) // input h assumed zero, for iv 
 __device__
 void GOST_g_0_1(uint64_t* h, uint64_t* const M) // input h assumed all bytes one, for iv 256
 {
-	GOST_E(F1, M, h);
+	GOST_E_F1 (M, h);
 	GOST_Xor512_c(h, h, M, 0x0101010101010101); // h = h ^ M ^ 1 
 }
 
