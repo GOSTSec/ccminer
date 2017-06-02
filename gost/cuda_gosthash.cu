@@ -854,14 +854,14 @@ void gostd_gpu_hash_80(const uint32_t threads, const uint32_t startNonce, uint32
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	// copy table to shared memory, we assume 256 threads per block	
-	T0S[threadIdx.x] = T0[threadIdx.x];
-	T1S[threadIdx.x] = T1[threadIdx.x];
-	T2S[threadIdx.x] = T2[threadIdx.x];
-	T3S[threadIdx.x] = T3[threadIdx.x];
-	T4S[threadIdx.x] = T4[threadIdx.x];
-	T5S[threadIdx.x] = T5[threadIdx.x];
-	T6S[threadIdx.x] = T6[threadIdx.x];
-	T7S[threadIdx.x] = T7[threadIdx.x];	
+	T0S[threadIdx.x] = __ldg (&T0[threadIdx.x]);
+	T1S[threadIdx.x] = __ldg (&T1[threadIdx.x]);
+	T2S[threadIdx.x] = __ldg (&T2[threadIdx.x]);
+	T3S[threadIdx.x] = __ldg (&T3[threadIdx.x]);
+	T4S[threadIdx.x] = __ldg (&T4[threadIdx.x]);
+	T5S[threadIdx.x] = __ldg (&T5[threadIdx.x]);
+	T6S[threadIdx.x] = __ldg (&T6[threadIdx.x]);
+	T7S[threadIdx.x] = __ldg (&T7[threadIdx.x]);	
 	if (thread < threads)
 	{
 		const uint32_t nonce = startNonce + thread;
