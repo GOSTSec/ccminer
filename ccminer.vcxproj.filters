@@ -103,6 +103,9 @@
     <Filter Include="Source Files\CUDA\xmr">
       <UniqueIdentifier>{0f9aec5e-5409-488f-992a-2c108590d1ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\gost">
+      <UniqueIdentifier>{6a99bc95-f402-465e-9e64-b042bd241bb7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -888,6 +891,12 @@
     </CudaCompile>
     <CudaCompile Include="crypto\wildkeccak.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="gost\cuda_gosthash.cu">
+      <Filter>Source Files\CUDA\gost</Filter>
+    </CudaCompile>
+    <CudaCompile Include="gost\gost.cu">
+      <Filter>Source Files\CUDA\gost</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
