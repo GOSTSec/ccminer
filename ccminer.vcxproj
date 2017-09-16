@@ -562,6 +562,8 @@
     <CudaCompile Include="x17\cuda_x17_sha512.cu">
       <MaxRegCount>80</MaxRegCount>
     </CudaCompile>
+    <CudaCompile Include="gost\cuda_gosthash.cu" />
+    <CudaCompile Include="gost\gost.cu" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico" />
