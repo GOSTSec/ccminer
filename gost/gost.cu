@@ -21,6 +21,15 @@ extern "C" void gostd_hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+extern "C" void gostd(void *output, const void *input, size_t len)
+{
+	unsigned char _ALIGN(64) hash[64];
+
+	sph_gost512(hash, (const void*)input, len);
+	sph_gost256(hash, (const void*)hash, 64);
+
+	memcpy(output, hash, 32);
+}
 
 //#define _DEBUG
 #define _DEBUG_PREFIX "gost"
