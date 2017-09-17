@@ -1500,9 +1500,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_WHIRLCOIN:
 			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
 			break;
-        case ALGO_GOSTD:
-            gostd(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
-        break;
+		case ALGO_GOSTD:
+			gostd(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+			break;
 		case ALGO_WHIRLPOOL:
 		default:
 			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -1512,11 +1512,11 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 			heavycoin_hash(merkle_root, merkle_root, 64);
-        if (opt_algo == ALGO_GOSTD)
-        {
-            memcpy(merkle_root + 32, merkle_root, 32);
-            gostd(merkle_root, merkle_root, 64);
-        }
+		else if (opt_algo == ALGO_GOSTD)
+		{
+			memcpy(merkle_root + 32, merkle_root, 32);
+			gostd(merkle_root, merkle_root, 64);
+		}
 		else
 			sha256d(merkle_root, merkle_root, 64);
 	}
@@ -3708,7 +3708,9 @@ int main(int argc, char *argv[])
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
 		printf("  Originally based on Christian Buchner and Christian H. project\n");
 		printf("  Include some algos from alexis78, djm34, sp, tsiv and klausT.\n\n");
-		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
+		printf("  GOSTd algo by PurpleI2P team, ©2017. Donations are welcome to\n");
+		printf("  address GbD2JSQHBHCKLa9WTHmigJRpyFgmBj4woG. Thanks!\n\n");
+		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n");
 	}
 
 	rpc_user = strdup("");
