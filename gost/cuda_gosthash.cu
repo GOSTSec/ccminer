@@ -721,6 +721,25 @@ void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 	#pragma unroll 4
 	for (int b=0; b<4; b++) 
 	{
+#if (__CUDA_ARCH__ >= 500)
+		return_state[b] = __ldg (&T0[EXTRACT_BYTE(state32[14], b)])
+			^ __ldg (&T1[EXTRACT_BYTE(state32[12], b)])
+			^ __ldg (&T2[EXTRACT_BYTE(state32[10], b)])
+			^ __ldg (&T3[EXTRACT_BYTE(state32[8], b)])
+			^ T4S[EXTRACT_BYTE(state32[6], b)]
+			^ T5S[EXTRACT_BYTE(state32[4], b)]
+			^ T6S[EXTRACT_BYTE(state32[2], b)]
+			^ T7S[EXTRACT_BYTE(state32[0], b)];
+		
+		return_state[b+4]  = T0S[EXTRACT_BYTE(state32[15], b)]
+			^ T1S[EXTRACT_BYTE(state32[13], b)]
+			^ T2S[EXTRACT_BYTE(state32[11], b)]
+			^ T3S[EXTRACT_BYTE(state32[9], b)]
+			^ __ldg (&T4[EXTRACT_BYTE(state32[7], b)])
+			^ __ldg (&T5[EXTRACT_BYTE(state32[5], b)])
+			^ __ldg (&T6[EXTRACT_BYTE(state32[3], b)])
+			^ __ldg (&T7[EXTRACT_BYTE(state32[1], b)]);
+#else
 		return_state[b]  = T0S[EXTRACT_BYTE(state32[14], b)]
 			^ T1S[EXTRACT_BYTE(state32[12], b)]
 			^ T2S[EXTRACT_BYTE(state32[10], b)]
@@ -738,6 +757,7 @@ void GOST_FS(uint64_t* const state64, uint64_t* return_state)
 			^ T5S[EXTRACT_BYTE(state32[5], b)]
 			^ T6S[EXTRACT_BYTE(state32[3], b)]
 			^ T7S[EXTRACT_BYTE(state32[1], b)];
+#endif
 	}
 }
 
@@ -761,7 +781,11 @@ static void GOST_E12(uint64_t* const K, uint64_t *state)
 	GOST_FS(state, state1);
 	GOST_Xor512(state, state1, K1);
 
+#if (__CUDA_ARCH__ >= 500)
+	#pragma unroll 11
+#else
 	#pragma unroll 5
+#endif
 	for(int i=1; i<12; i++)
 	{
 		GOST_Xor512(state1, K1, CC[i]);
