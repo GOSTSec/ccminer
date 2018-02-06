@@ -34,6 +34,7 @@ static uint32_t device_bus_ids[MAX_GPUS] = { 0 };
 
 extern uint32_t device_gpu_clocks[MAX_GPUS];
 extern uint32_t device_mem_clocks[MAX_GPUS];
+extern int32_t device_mem_offsets[MAX_GPUS];
 extern uint8_t device_tlimit[MAX_GPUS];
 extern int8_t device_pstate[MAX_GPUS];
 extern int32_t device_led[MAX_GPUS];
@@ -43,6 +44,9 @@ static __thread bool has_rgb_ok = false;
 uint32_t clock_prev[MAX_GPUS] = { 0 };
 uint32_t clock_prev_mem[MAX_GPUS] = { 0 };
 uint32_t limit_prev[MAX_GPUS] = { 0 };
+
+static bool nvml_plimit_set = false;
+extern bool need_memclockrst;
 
 /*
  * Wrappers to emulate dlopen() on other systems like Windows
@@ -240,6 +244,7 @@ nvml_handle * nvml_create()
 	nvmlh->nvml_pci_domain_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_bus_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_device_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
+	nvmlh->nvml_pci_vendor_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_pci_subsys_id = (unsigned int*) calloc(nvmlh->nvml_gpucount, sizeof(unsigned int));
 	nvmlh->nvml_cuda_device_id = (int*) calloc(nvmlh->nvml_gpucount, sizeof(int));
 	nvmlh->cuda_nvml_device_id = (int*) calloc(nvmlh->cuda_gpucount, sizeof(int));
@@ -259,6 +264,7 @@ nvml_handle * nvml_create()
 		nvmlh->nvml_pci_domain_id[i] = pciinfo.domain;
 		nvmlh->nvml_pci_bus_id[i]    = pciinfo.bus;
 		nvmlh->nvml_pci_device_id[i] = pciinfo.device;
+		nvmlh->nvml_pci_vendor_id[i] = pciinfo.pci_device_id;
 		nvmlh->nvml_pci_subsys_id[i] = pciinfo.pci_subsystem_id;
 
 		nvmlh->app_clocks[i] = NVML_FEATURE_UNKNOWN;
@@ -306,6 +312,8 @@ int nvml_set_clocks(nvml_handle *nvmlh, int dev_id)
 	nvmlReturn_t rc;
 	uint32_t gpu_clk = 0, mem_clk = 0;
 	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	//if (need_nvsettings) /* prefer later than init time */
+	//	nvs_set_clocks(dev_id);
 	if (n < 0 || n >= nvmlh->nvml_gpucount)
 		return -ENODEV;
 
@@ -391,6 +399,8 @@ int nvml_reset_clocks(nvml_handle *nvmlh, int dev_id)
 	nvmlReturn_t rc;
 	uint32_t gpu_clk = 0, mem_clk = 0;
 	int n = nvmlh->cuda_nvml_device_id[dev_id];
+	if (need_nvsettings)
+		nvs_reset_clocks(dev_id);
 	if (n < 0 || n >= nvmlh->nvml_gpucount)
 		return -ENODEV;
 
@@ -523,10 +533,13 @@ int nvml_set_plimit(nvml_handle *nvmlh, int dev_id)
 	plimit = max(plimit, pmin);
 	rc = nvmlh->nvmlDeviceSetPowerManagementLimit(nvmlh->devs[n], plimit);
 	if (rc != NVML_SUCCESS) {
+#ifndef WIN32
 		applog(LOG_WARNING, "GPU #%d: plimit %s", dev_id, nvmlh->nvmlErrorString(rc));
+#endif
 		return -1;
 	} else {
 		device_plimit[dev_id] = plimit / 1000;
+		nvml_plimit_set = true;
 	}
 
 	if (!opt_quiet) {
@@ -563,10 +576,19 @@ void nvml_print_device_info(int dev_id)
 
 	nvmlReturn_t rc;
 
+	// fprintf(stderr, "------ Hardware ------\n");
+	int gvid = hnvml->nvml_pci_vendor_id[n] & 0xFFFF;
+	int gpid = hnvml->nvml_pci_vendor_id[n] >> 16;
+	int svid = hnvml->nvml_pci_subsys_id[n] & 0xFFFF;
+	int spid = hnvml->nvml_pci_subsys_id[n] >> 16;
+
+	fprintf(stderr, LSTDEV_PFX "ID %04x:%04x/%04x:%04x BUS %04x:%02x:%02x.0\n", gvid, gpid, svid, spid,
+		(int) hnvml->nvml_pci_domain_id[n], (int) hnvml->nvml_pci_bus_id[n], (int) hnvml->nvml_pci_device_id[n]);
+
 	if (hnvml->nvmlDeviceGetClock) {
 		uint32_t gpu_clk = 0, mem_clk = 0;
 
-		fprintf(stderr, "------- Clocks -------\n");
+		// fprintf(stderr, "------- Clocks -------\n");
 
 		hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_GRAPHICS, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &gpu_clk);
 		rc = hnvml->nvmlDeviceGetClock(hnvml->devs[n], NVML_CLOCK_MEM, NVML_CLOCK_ID_APP_CLOCK_DEFAULT, &mem_clk);
@@ -778,11 +800,11 @@ int nvml_get_info(nvml_handle *nvmlh, int cudaindex, uint16_t &vid, uint16_t &pi
 		return -ENODEV;
 
 	subids = nvmlh->nvml_pci_subsys_id[gpuindex];
-	if (!subids) subids = nvmlh->nvml_pci_device_id[gpuindex];
+	if (!subids) subids = nvmlh->nvml_pci_vendor_id[gpuindex];
 	pid = subids >> 16;
 	vid = subids & 0xFFFF;
 	// Colorful and Inno3D
-	if (pid == 0) pid = nvmlh->nvml_pci_device_id[gpuindex] >> 16;
+	if (pid == 0) pid = nvmlh->nvml_pci_vendor_id[gpuindex] >> 16;
 	return 0;
 }
 
@@ -795,6 +817,7 @@ int nvml_destroy(nvml_handle *nvmlh)
 	free(nvmlh->nvml_pci_bus_id);
 	free(nvmlh->nvml_pci_device_id);
 	free(nvmlh->nvml_pci_domain_id);
+	free(nvmlh->nvml_pci_vendor_id);
 	free(nvmlh->nvml_pci_subsys_id);
 	free(nvmlh->nvml_cuda_device_id);
 	free(nvmlh->cuda_nvml_device_id);
@@ -1369,7 +1392,16 @@ int nvapi_pstateinfo(unsigned int devNum)
 	}
 
 	uint32_t plim = nvapi_get_plimit(devNum);
-	applog(LOG_RAW, " Power limit is set to %u%%", plim);
+	double min_pw = 0, max_pw = 0; // percent
+
+	NVAPI_GPU_POWER_INFO nfo = { 0 };
+	nfo.version = NVAPI_GPU_POWER_INFO_VER;
+	ret = NvAPI_DLL_ClientPowerPoliciesGetInfo(phys[devNum], &nfo);
+	if (ret == NVAPI_OK && nfo.valid) {
+		min_pw = (double)nfo.entries[0].min_power / 1000;
+		max_pw = (double)nfo.entries[0].max_power / 1000;
+	}
+	applog(LOG_RAW, " Power limit is set to %u%%, range [%.0f-%.0f%%]", plim, min_pw, max_pw);
 
 #if 0
 	NVAPI_COOLER_SETTINGS *cooler;
@@ -1705,6 +1737,30 @@ int nvapi_set_memclock(unsigned int devNum, uint32_t clock)
 	return ret;
 }
 
+static int nvapi_set_memoffset(unsigned int devNum, int32_t delta, bool log=true)
+{
+	NvAPI_Status ret;
+	NvS32 deltaKHz = delta * 1000;
+
+	if (devNum >= nvapi_dev_cnt)
+		return -ENODEV;
+
+	// todo: bounds check with GetPstates20
+
+	NV_GPU_PERF_PSTATES20_INFO_V1 pset1 = { 0 };
+	pset1.version = NV_GPU_PERF_PSTATES20_INFO_VER1;
+	pset1.numPstates = 1;
+	pset1.numClocks = 1;
+	pset1.pstates[0].clocks[0].domainId = NVAPI_GPU_PUBLIC_CLOCK_MEMORY;
+	pset1.pstates[0].clocks[0].freqDelta_kHz.value = deltaKHz;
+	ret = NvAPI_DLL_SetPstates20v1(phys[devNum], &pset1);
+	if (ret == NVAPI_OK) {
+		if (log) applog(LOG_INFO, "GPU #%u: Memory clock offset set to %+d MHz", devNum, deltaKHz / 1000);
+		need_memclockrst = true;
+	}
+	return ret;
+}
+
 // Replacement for WIN32 CUDA 6.5 on pascal
 int nvapiMemGetInfo(int dev_id, uint64_t *free, uint64_t *total)
 {
@@ -1723,7 +1779,7 @@ int nvapi_init()
 {
 	int num_gpus = cuda_num_devices();
 	NvAPI_Status ret = NvAPI_Initialize();
-	if (!ret == NVAPI_OK){
+	if (ret != NVAPI_OK) {
 		NvAPI_ShortString string;
 		NvAPI_GetErrorMessage(ret, string);
 		if (opt_debug)
@@ -1800,7 +1856,7 @@ int nvapi_init_settings()
 
 	for (int n=0; n < opt_n_threads; n++) {
 		int dev_id = device_map[n % MAX_GPUS];
-		if (device_plimit[dev_id] && !hnvml) {
+		if (device_plimit[dev_id] && !nvml_plimit_set) {
 			if (nvapi_set_plimit(nvapi_dev_map[dev_id], device_plimit[dev_id]) == NVAPI_OK) {
 				uint32_t res = nvapi_get_plimit(nvapi_dev_map[dev_id]);
 				gpulog(LOG_INFO, n, "Power limit is set to %u%%", res);
@@ -1814,15 +1870,23 @@ int nvapi_init_settings()
 			if (ret) {
 				NvAPI_ShortString string;
 				NvAPI_GetErrorMessage((NvAPI_Status) ret, string);
-				gpulog(LOG_WARNING, n, "Boost gpu clock %s", string);
+				gpulog(LOG_WARNING, n, "nvapi_set_gpuclock %s", string);
 			}
 		}
-		if (device_mem_clocks[dev_id]) {
+		if (device_mem_offsets[dev_id]) {
+			ret = nvapi_set_memoffset(nvapi_dev_map[dev_id], device_mem_offsets[dev_id]);
+			if (ret) {
+				NvAPI_ShortString string;
+				NvAPI_GetErrorMessage((NvAPI_Status)ret, string);
+				gpulog(LOG_WARNING, n, "nvapi_set_memoffset %s", string);
+			}
+		}
+		else if (device_mem_clocks[dev_id]) {
 			ret = nvapi_set_memclock(nvapi_dev_map[dev_id], device_mem_clocks[dev_id]);
 			if (ret) {
 				NvAPI_ShortString string;
 				NvAPI_GetErrorMessage((NvAPI_Status) ret, string);
-				gpulog(LOG_WARNING, n, "Boost mem clock %s", string);
+				gpulog(LOG_WARNING, n, "nvapi_set_memclock %s", string);
 			}
 		}
 		if (device_pstate[dev_id]) {
@@ -1838,6 +1902,14 @@ int nvapi_init_settings()
 	}
 
 	return ret;
+}
+
+void nvapi_toggle_clocks(int thr_id, bool enable)
+{
+	int dev_id = device_map[thr_id % MAX_GPUS];
+	if (device_mem_offsets[dev_id]) {
+		nvapi_set_memoffset(nvapi_dev_map[dev_id], enable ? device_mem_offsets[dev_id] : 0, false);
+	}
 }
 
 unsigned int nvapi_devnum(int dev_id)
