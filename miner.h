@@ -267,7 +267,6 @@ json_t * json_load_url(char* cfg_url, json_error_t *err);
 void sha256_init(uint32_t *state);
 void sha256_transform(uint32_t *state, const uint32_t *block, int swap);
 void sha256d(unsigned char *hash, const unsigned char *data, int len);
-
 void gostd(void *output, const void *input, size_t len);
 
 #define HAVE_SHA256_4WAY 0
@@ -288,6 +287,7 @@ extern int scanhash_equihash(int thr_id, struct work* work, uint32_t max_nonce, 
 extern int scanhash_keccak256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_fresh(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_fugue256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_gostd(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_groestlcoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_hmq17(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_heavy(int thr_id,struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen);
@@ -311,7 +311,6 @@ extern int scanhash_sha256d(int thr_id, struct work *work, uint32_t max_nonce, u
 extern int scanhash_sha256t(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_sia(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_sib(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
-extern int scanhash_gostd(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_skeincoin(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_skein2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_skunk(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -353,6 +352,7 @@ extern void free_equihash(int thr_id);
 extern void free_keccak256(int thr_id);
 extern void free_fresh(int thr_id);
 extern void free_fugue256(int thr_id);
+extern void free_gostd(int thr_id);
 extern void free_groestlcoin(int thr_id);
 extern void free_heavy(int thr_id);
 extern void free_hmq17(int thr_id);
@@ -374,7 +374,6 @@ extern void free_quark(int thr_id);
 extern void free_qubit(int thr_id);
 extern void free_sha256d(int thr_id);
 extern void free_sha256t(int thr_id);
-extern void free_gostd(int thr_id);
 extern void free_sia(int thr_id);
 extern void free_sib(int thr_id);
 extern void free_skeincoin(int thr_id);
@@ -898,6 +897,7 @@ void deephash(void *state, const void *input);
 void luffa_hash(void *state, const void *input);
 void fresh_hash(void *state, const void *input);
 void fugue256_hash(unsigned char* output, const unsigned char* input, int len);
+void gostd_hash(void *output, const void *input);
 void heavycoin_hash(unsigned char* output, const unsigned char* input, int len);
 void hmq17hash(void *output, const void *input);
 void hsr_hash(void *output, const void *input);
@@ -922,7 +922,6 @@ void scryptjane_hash(void* output, const void* input);
 void sha256d_hash(void *output, const void *input);
 void sha256t_hash(void *output, const void *input);
 void sibhash(void *output, const void *input);
-void gostd_hash(void *output, const void *input);
 void skeincoinhash(void *output, const void *input);
 void skein2hash(void *output, const void *input);
 void skunk_hash(void *state, const void *input);

@@ -251,12 +251,7 @@ Options:\n\
 			dmd-gr      Diamond-Groestl\n\
 			fresh       Freshcoin (shavite 80)\n\
 			fugue256    Fuguecoin\n\
-			groestl     Groestlcoin\n\
-			heavy       Heavycoin\n\
-			hmq1725     Doubloons / Espers\n\
-			jackpot     Jackpot\n\
-			keccak      Keccak-256 (Maxcoin)\n\
-			gostd		GOSTd (GOSTcoin)\n\
+			gostd       GOSTd (GOSTcoin)\n\
 			groestl     Groestlcoin\n"
 #ifdef WITH_HEAVY_ALGO
 "			heavy       Heavycoin\n"
@@ -1583,16 +1578,16 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
-#ifdef WITH_HEAVY_ALGO
-		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
-			heavycoin_hash(merkle_root, merkle_root, 64);
-		else if (opt_algo == ALGO_GOSTD)
+		if (opt_algo == ALGO_GOSTD)
 		{
 			memcpy(merkle_root + 32, merkle_root, 32);
 			gostd(merkle_root, merkle_root, 64);
 		}
-		else
+#ifdef WITH_HEAVY_ALGO
+		else if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
+			heavycoin_hash(merkle_root, merkle_root, 64);
 #endif
+		else
 			sha256d(merkle_root, merkle_root, 64);
 	}
 	
@@ -3890,7 +3885,7 @@ int main(int argc, char *argv[])
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
 		printf("  Originally based on Christian Buchner and Christian H. project\n");
 		printf("  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
-		printf("  GOSTd algo by PurpleI2P team, ©2017. Donations are welcome to\n");
+		printf("  GOSTd algo by PurpleI2P team, ©2017-2018. Donations are welcome to\n");
 		printf("  address GbD2JSQHBHCKLa9WTHmigJRpyFgmBj4woG. Thanks!\n\n");
 		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 	}
