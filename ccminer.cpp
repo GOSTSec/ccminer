@@ -3885,7 +3885,7 @@ int main(int argc, char *argv[])
 			CUDART_VERSION/1000, (CUDART_VERSION % 1000)/10, arch);
 		printf("  Originally based on Christian Buchner and Christian H. project\n");
 		printf("  Include some kernels from alexis78, djm34, djEzo, tsiv and krnlx.\n\n");
-		printf("  GOSTd algo by PurpleI2P team, ©2017-2018. Donations are welcome to\n");
+		printf("  GOSTd algo by PurpleI2P team, 2017-2018. Donations are welcome to\n");
 		printf("  address GbD2JSQHBHCKLa9WTHmigJRpyFgmBj4woG. Thanks!\n\n");
 		printf("BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)\n\n");
 	}
