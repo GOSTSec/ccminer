@@ -16,14 +16,18 @@ enum sha_algos {
 	ALGO_DEEP,
 	ALGO_DECRED,
 	ALGO_DMD_GR,
+	ALGO_EQUIHASH,
 	ALGO_FRESH,
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GOSTD,
 	ALGO_GROESTL,
 	ALGO_HEAVY,		/* Heavycoin hash */
 	ALGO_HMQ1725,
+	ALGO_HSR,
 	ALGO_KECCAK,
+	ALGO_KECCAKC,		/* refreshed Keccak with pool factor 256 */
 	ALGO_JACKPOT,
+	ALGO_JHA,
 	ALGO_LBRY,
 	ALGO_LUFFA,
 	ALGO_LYRA2,
@@ -34,6 +38,8 @@ enum sha_algos {
 	ALGO_NEOSCRYPT,
 	ALGO_NIST5,
 	ALGO_PENTABLAKE,
+	ALGO_PHI,
+	ALGO_POLYTIMOS,
 	ALGO_QUARK,
 	ALGO_QUBIT,
 	ALGO_SCRYPT,
@@ -44,8 +50,11 @@ enum sha_algos {
 	ALGO_SIB,
 	ALGO_SKEIN,
 	ALGO_SKEIN2,
+	ALGO_SKUNK,
 	ALGO_S3,
 	ALGO_TIMETRAVEL,
+	ALGO_TRIBUS,
+	ALGO_BITCORE,
 	ALGO_X11EVO,
 	ALGO_X11,
 	ALGO_X13,
@@ -77,14 +86,18 @@ static const char *algo_names[] = {
 	"deep",
 	"decred",
 	"dmd-gr",
+	"equihash",
 	"fresh",
 	"fugue256",
 	"gostd",
 	"groestl",
 	"heavy",
 	"hmq1725",
+	"hsr",
 	"keccak",
+	"keccakc",
 	"jackpot",
+	"jha",
 	"lbry",
 	"luffa",
 	"lyra2",
@@ -95,6 +108,8 @@ static const char *algo_names[] = {
 	"neoscrypt",
 	"nist5",
 	"penta",
+	"phi",
+	"polytimos",
 	"quark",
 	"qubit",
 	"scrypt",
@@ -105,8 +120,11 @@ static const char *algo_names[] = {
 	"sib",
 	"skein",
 	"skein2",
+	"skunk",
 	"s3",
 	"timetravel",
+	"tribus",
+	"bitcore",
 	"x11evo",
 	"x11",
 	"x13",
@@ -147,14 +165,20 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_C11;
 		else if (!strcasecmp("diamond", arg))
 			i = ALGO_DMD_GR;
+		else if (!strcasecmp("equi", arg))
+			i = ALGO_EQUIHASH;
 		else if (!strcasecmp("doom", arg))
 			i = ALGO_LUFFA;
 		else if (!strcasecmp("hmq17", arg))
 			i = ALGO_HMQ1725;
+		else if (!strcasecmp("hshare", arg))
+			i = ALGO_HSR;
 		else if (!strcasecmp("lyra2re", arg))
 			i = ALGO_LYRA2;
 		else if (!strcasecmp("lyra2rev2", arg))
 			i = ALGO_LYRA2v2;
+		else if (!strcasecmp("phi1612", arg))
+			i = ALGO_PHI;
 		else if (!strcasecmp("bitcoin", arg))
 			i = ALGO_SHA256D;
 		else if (!strcasecmp("sha256", arg))
@@ -163,6 +187,8 @@ static inline int algo_to_int(char* arg)
 			i = ALGO_GOSTD;
 		else if (!strcasecmp("thorsriddle", arg))
 			i = ALGO_VELTOR;
+		else if (!strcasecmp("timetravel10", arg))
+			i = ALGO_BITCORE;
 		else if (!strcasecmp("whirl", arg))
 			i = ALGO_WHIRLPOOL;
 		else if (!strcasecmp("ziftr", arg))

@@ -1,5 +1,5 @@
 
-ccminer 2.0 (March 2017)      "Cryptonight & other funny algos"
+ccminer 2.2.4 (Jan. 2018)     "lyra2v2 and keccak improvements"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -9,11 +9,6 @@ If you find this tool useful and like to support its continuous
 tpruvot@github:
   BTC  : 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
   DCR  : DsUCcACGcyP8McNMRXQwbtpDxaVUYLDQDeU
-  LBC  : bKe6pLqELL3HHSbpJXxSdn5RrY2bfrkRhF
-
-Alexis:
-  BTC  : 14EgXD7fPYD4sHBXWUi46VeiTVXNq765B8
-  XVC  : Vr5oCen8NrY6ekBWFaaWjCUFBH4dyiS57W
 
 DJM34:
   BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
@@ -33,7 +28,7 @@ HeavyCoin & MjollnirCoin
 FugueCoin
 GroestlCoin & Myriad-Groestl
 Lbry Credits
-JackpotCoin
+JackpotCoin (JHA)
 QuarkCoin family & AnimeCoin
 TalkCoin
 DarkCoin and other X11 coins
@@ -51,6 +46,8 @@ Scrypt and Scrypt:N
 Scrypt-Jane (Chacha)
 Sibcoin (sib)
 Skein (Skein + SHA)
+Signatum (Skein cubehash fugue Streebog)
+Tribus (JH, keccak, simd)
 Woodcoin (Double Skein)
 Vanilla (Blake256 8-rounds - double sha256)
 Vertcoin Lyra2RE
@@ -77,35 +74,39 @@ its command line interface and options.
 
   -a, --algo=ALGO       specify the algorithm to use
                           bastion     use to mine Joincoin
+                          bitcore     use to mine Bitcore's Timetravel10
                           blake       use to mine Saffroncoin (Blake256)
                           blakecoin   use to mine Old Blake 256
                           blake2s     use to mine Nevacoin (Blake2-S 256)
                           bmw         use to mine Midnight
                           cryptolight use to mine AEON cryptonight (MEM/2)
-                          cryptonight use to mine XMR cryptonight
+                          cryptonight use to mine XMR cryptonight, Bytecoin, Dash, DigitalNote, etc
                           c11/flax    use to mine Chaincoin and Flax
                           decred      use to mine Decred 180 bytes Blake256-14
                           deep        use to mine Deepcoin
                           dmd-gr      use to mine Diamond-Groestl
+                          equihash    use to mine ZEC, HUSH and KMD
                           fresh       use to mine Freshcoin
                           fugue256    use to mine Fuguecoin
                           groestl     use to mine Groestlcoin
-                          heavy       use to mine Heavycoin
-                          jackpot     use to mine Jackpotcoin
+                          hsr         use to mine Hshare
+                          jackpot     use to mine Sweepcoin
                           keccak      use to mine Maxcoin
+                          keccakc     use to mine CreativeCoin
                           lbry        use to mine LBRY Credits
                           luffa       use to mine Joincoin
                           lyra2       use to mine CryptoCoin
                           lyra2v2     use to mine Vertcoin
                           lyra2z      use to mine Zerocoin (XZC)
-                          mjollnir    use to mine Mjollnircoin
                           myr-gr      use to mine Myriad-Groest
-                          neoscrypt   use to mine FeatherCoin
+                          neoscrypt   use to mine FeatherCoin, Trezarcoin, Orbitcoin, etc
                           nist5       use to mine TalkCoin
                           penta       use to mine Joincoin / Pentablake
+                          phi         use to mine LUXCoin
+                          polytimos   use to mine Polytimos
                           quark       use to mine Quarkcoin
                           qubit       use to mine Qubit
-                          scrypt      use to mine Scrypt coins
+                          scrypt      use to mine Scrypt coins (Litecoin, Dogecoin, etc)
                           scrypt:N    use to mine Scrypt-N (:10 for 2048 iterations)
                           scrypt-jane use to mine Chacha coins like Cache and Ultracoin
                           s3          use to mine 1coin (ONE)
@@ -114,12 +115,13 @@ its command line interface and options.
                           sib         use to mine Sibcoin
                           skein       use to mine Skeincoin
                           skein2      use to mine Woodcoin
+                          skunk       use to mine Signatum
                           timetravel  use to mine MachineCoin
+                          tribus      use to mine Denarius
                           x11evo      use to mine Revolver
                           x11         use to mine DarkCoin
                           x14         use to mine X14Coin
                           x15         use to mine Halcyon
-                          x17         use to mine X17
                           x17         use to mine X17
                           vanilla     use to mine Vanilla (Blake256)
                           veltor      use to mine VeltorCoin
@@ -137,8 +139,6 @@ its command line interface and options.
       --cuda-schedule   Set device threads scheduling mode (default: auto)
   -f, --diff-factor     Divide difficulty by this factor (default 1.0)
   -m, --diff-multiplier Multiply difficulty by this value (default 1.0)
-      --vote=VOTE       block reward vote (for HeavyCoin)
-      --trust-pool      trust the max block reward vote (maxvote) sent by the pool
   -o, --url=URL         URL of mining server
   -O, --userpass=U:P    username:password pair for mining server
   -u, --user=USERNAME   username for mining server
@@ -154,6 +154,7 @@ its command line interface and options.
   -T, --timeout=N       network timeout, in seconds (default: 300)
   -s, --scantime=N      upper bound on time spent scanning current work when
                         long polling is unavailable, in seconds (default: 5)
+      --submit-stale    ignore stale job checks, may create more rejected shares
   -n, --ndevs           list cuda devices
   -N, --statsavg        number of samples used to display hashrate (default: 30)
       --no-gbt          disable getblocktemplate support (height check in solo)
@@ -163,14 +164,16 @@ its command line interface and options.
       --no-color        disable colored output
   -D, --debug           enable debug output
   -P, --protocol-dump   verbose dump of protocol-level activities
-  -b, --api-bind        IP/Port for the miner API (default: 127.0.0.1:4068)
-      --api-remote      Allow remote control
+  -b, --api-bind=port   IP:port for the miner API (default: 127.0.0.1:4068), 0 disabled
+      --api-remote      Allow remote control, like pool switching, imply --api-allow=0/0
+      --api-allow=...   IP/mask of the allowed api client(s), 0/0 for all
       --max-temp=N      Only mine if gpu temp is less than specified value
       --max-rate=N[KMG] Only mine if net hashrate is less than specified value
       --max-diff=N      Only mine if net difficulty is less than specified value
       --max-log-rate    Interval to reduce per gpu hashrate logs (default: 3)
       --pstate=0        will force the Geforce 9xx to run in P0 P-State
       --plimit=150W     set the gpu power limit, allow multiple values for N cards
+                          on windows this parameter use percentages (like OC tools)
       --tlimit=85       Set the gpu thermal limit (windows only)
       --keep-clocks     prevent reset clocks and/or power limit on exit
       --hide-diff       Hide submitted shares diff and net difficulty
@@ -274,8 +277,38 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
+  Jan. 04th 2017  v2.2.4
+                  Improve lyra2v2
+                  Higher keccak default intensity
+                  Drop SM 2.x support by default, for CUDA 9 and more recent
 
-  Mar. 08th 2017  v2.0
+  Dec. 04th 2017  v2.2.3
+                  Polytimos Algo
+                  Handle keccakc variant (with refreshed sha256d merkle)
+                  Optimised keccak for SM5+, based on alexis improvements
+
+  Oct. 09th 2017  v2.2.2
+                  Import and clean the hsr algo (x13 + custom hash)
+                  Import and optimise phi algo from LuxCoin repository
+                  Improve sib algo too for maxwell and pascal cards
+                  Small fix to handle more than 9 cards on linux (-d 10+)
+                  Attempt to free equihash memory "properly"
+                  --submit-stale parameter for supernova pool (which change diff too fast)
+
+  Sep. 01st 2017  v2.2.1
+                  Improve tribus algo on recent cards (up to +10%)
+
+  Aug. 13th 2017  v2.2
+                  New skunk algo, using the heavy streebog algorithm
+                  Enhance tribus algo (+10%)
+                  equihash protocol enhancement on yiimp.ccminer.org and zpool.ca
+
+  June 16th 2017  v2.1-tribus
+                  Interface equihash algo with djeZo solver (from nheqminer 0.5c)
+                  New api parameters (and multicast announces for local networks)
+                  New tribus algo
+
+  May. 14th 2017  v2.0
                   Handle cryptonight, wildkeccak and cryptonight-lite
                   Add a serie of new algos: timetravel, bastion, hmq1725, sha256t
                   Import lyra2z from djm34 work...
@@ -284,6 +317,7 @@ features.
                   Store the share diff of second nonce(s) in most algos
                   Hardware monitoring thread to get more accurate power readings
                   Small changes for the quiet mode & max-log-rate to reduce logs
+                  Add bitcore and a compatible jha algo
 
   Dec. 21th 2016  v1.8.4
                   Improve streebog based algos, veltor and sib (from alexis work)

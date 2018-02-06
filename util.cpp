@@ -211,35 +211,31 @@ void get_defconfig_path(char *out, size_t bufsize, char *argv0)
 #endif
 }
 
-void format_hashrate(double hashrate, char *output)
+void format_hashrate_unit(double hashrate, char *output, const char *unit)
 {
-	char prefix = '\0';
+	char prefix[2] = { 0, 0 };
 
 	if (hashrate < 10000) {
 		// nop
 	}
 	else if (hashrate < 1e7) {
-		prefix = 'k';
+		prefix[0] = 'k';
 		hashrate *= 1e-3;
 	}
 	else if (hashrate < 1e10) {
-		prefix = 'M';
+		prefix[0] = 'M';
 		hashrate *= 1e-6;
 	}
 	else if (hashrate < 1e13) {
-		prefix = 'G';
+		prefix[0] = 'G';
 		hashrate *= 1e-9;
 	}
 	else {
-		prefix = 'T';
+		prefix[0] = 'T';
 		hashrate *= 1e-12;
 	}
 
-	sprintf(
-		output,
-		prefix ? "%.2f %cH/s" : "%.2f H/s%c",
-		hashrate, prefix
-	);
+	sprintf(output, "%.2f %s%s", hashrate, prefix, unit);
 }
 
 static void databuf_free(struct data_buffer *db)
@@ -1179,14 +1175,27 @@ static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, i
 	}
 	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
 	if (!xn2_size) {
-		applog(LOG_ERR, "Failed to get extranonce2_size");
-		goto out;
+		char algo[64] = { 0 };
+		get_currentalgo(algo, sizeof(algo));
+		if (strcmp(algo, "equihash") == 0) {
+			int xn1_size = (int)strlen(xnonce1) / 2;
+			xn2_size = 32 - xn1_size;
+			if (xn1_size < 4 || xn1_size > 12) {
+				// This miner iterates the nonces at data32[30]
+				applog(LOG_ERR, "Unsupported extranonce size of %d (12 maxi)", xn1_size);
+				goto out;
+			}
+			goto skip_n2;
+		} else {
+			applog(LOG_ERR, "Failed to get extranonce2_size");
+			goto out;
+		}
 	}
 	if (xn2_size < 2 || xn2_size > 16) {
-		applog(LOG_INFO, "Failed to get valid n2size in parse_extranonce");
+		applog(LOG_ERR, "Failed to get valid n2size in parse_extranonce (%d)", xn2_size);
 		goto out;
 	}
-
+skip_n2:
 	pthread_mutex_lock(&stratum_work_lock);
 	if (sctx->xnonce1)
 		free(sctx->xnonce1);
@@ -1440,6 +1449,10 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	char algo[64] = { 0 };
 	get_currentalgo(algo, sizeof(algo));
 	bool has_claim = !strcasecmp(algo, "lbry");
+
+	if (sctx->is_equihash) {
+		return equi_stratum_notify(sctx, params);
+	}
 
 	job_id = json_string_value(json_array_get(params, p++));
 	prevhash = json_string_value(json_array_get(params, p++));
@@ -1769,6 +1782,9 @@ static bool stratum_show_message(struct stratum_ctx *sctx, json_t *id, json_t *p
 	json_t *val;
 	bool ret;
 
+	if (sctx->is_equihash)
+		return equi_stratum_show_message(sctx, id, params);
+
 	val = json_array_get(params, 0);
 	if (val)
 		applog(LOG_NOTICE, "MESSAGE FROM SERVER: %s", json_string_value(val));
@@ -1840,6 +1856,11 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 	}
 	if (!strcasecmp(method, "mining.set_difficulty")) {
 		ret = stratum_set_difficulty(sctx, params);
+		goto out;
+	}
+	if (!strcasecmp(method, "mining.set_target")) {
+		sctx->is_equihash = true;
+		ret = equi_stratum_set_target(sctx, params);
 		goto out;
 	}
 	if (!strcasecmp(method, "mining.set_extranonce")) {
@@ -2185,8 +2206,11 @@ void print_hash_tests(void)
 	hmq17hash(&hash[0], &buf[0]);
 	printpfx("hmq1725", hash);
 
-	jackpothash(&hash[0], &buf[0]);
-	printpfx("jackpot", hash);
+	hsr_hash(&hash[0], &buf[0]);
+        printpfx("hsr", hash);
+
+	jha_hash(&hash[0], &buf[0]);
+	printpfx("jha", hash);
 
 	keccak256_hash(&hash[0], &buf[0]);
 	printpfx("keccak", hash);
@@ -2219,6 +2243,12 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
+	phihash(&hash[0], &buf[0]);
+	printpfx("phi", hash);
+
+	polytimos_hash(&hash[0], &buf[0]);
+	printpfx("polytimos", hash);
+
 	quarkhash(&hash[0], &buf[0]);
 	printpfx("quark", hash);
 
@@ -2237,6 +2267,9 @@ void print_hash_tests(void)
 	sha256t_hash(&hash[0], &buf[0]);
 	printpfx("sha256t", hash);
 
+	blake2b_hash(&hash[0], &buf[0]);
+	printpfx("sia", hash);
+
 	sibhash(&hash[0], &buf[0]);
 	printpfx("sib", hash);
 
@@ -2249,14 +2282,23 @@ void print_hash_tests(void)
 	skein2hash(&hash[0], &buf[0]);
 	printpfx("skein2", hash);
 
+	skunk_hash(&hash[0], &buf[0]);
+	printpfx("skunk", hash);
+
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 
 	timetravel_hash(&hash[0], &buf[0]);
 	printpfx("timetravel", hash);
 
+	bitcore_hash(&hash[0], &buf[0]);
+	printpfx("bitcore", hash);
+
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("vanilla", hash);
+
+	tribus_hash(&hash[0], &buf[0]);
+	printpfx("tribus", hash);
 
 	veltorhash(&hash[0], &buf[0]);
 	printpfx("veltor", hash);
