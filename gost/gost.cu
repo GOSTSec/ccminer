@@ -83,13 +83,18 @@ extern "C" int scanhash_gostd(int thr_id, struct work* work, uint32_t max_nonce,
 		if (work->nonces[0] != UINT32_MAX)
 		{
 			uint32_t _ALIGN(64) vhash[8];
+			uint32_t _ALIGN(64) vhash_le[8];
 
 			endiandata[19] = swab32 (work->nonces[0]);
 			gostd_hash(vhash, endiandata);
 			if (swab32(vhash[0]) <= ptarget[7] /*&& fulltest(vhash, ptarget)*/) 
 			{
 				work->valid_nonces = 1;
-				work_set_target_ratio(work, vhash);
+
+				for (int i = 0; i < 8; i++)
+					vhash_le[i] = swab32(vhash[7-i]);
+
+				work_set_target_ratio(work, vhash_le);
 				if (work->nonces[1] != UINT32_MAX) 
 				{
 					endiandata[19] = swab32 (work->nonces[1]);
