@@ -291,9 +291,12 @@ Options:\n\
 			whirlpool   Whirlpool algo\n\
 			x11evo      Permuted x11 (Revolver)\n\
 			x11         X11 (DarkCoin)\n\
+			x12         X12 (GalaxyCash)\n\
 			x13         X13 (MaruCoin)\n\
 			x14         X14\n\
 			x15         X15\n\
+			x16r        X16R (Raven)\n\
+			x16s        X16S\n\
 			x17         X17\n\
 			wildkeccak  Boolberry\n\
 			zr5         ZR5 (ZiftrCoin)\n\
@@ -1714,6 +1717,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_LYRA2Z:
 		case ALGO_TIMETRAVEL:
 		case ALGO_BITCORE:
+		case ALGO_X16R:
+		case ALGO_X16S:
 			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
 			break;
 		case ALGO_KECCAK:
@@ -2253,6 +2258,7 @@ static void *miner_thread(void *userdata)
 			case ALGO_BITCORE:
 			case ALGO_X11EVO:
 			case ALGO_X11:
+			case ALGO_X12:
 			case ALGO_X13:
 			case ALGO_WHIRLCOIN:
 			case ALGO_WHIRLPOOL:
@@ -2503,6 +2509,9 @@ static void *miner_thread(void *userdata)
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, &work, max_nonce, &hashes_done);
 			break;
+		case ALGO_X12:
+			rc = scanhash_x12(thr_id, &work, max_nonce, &hashes_done);
+			break;
 		case ALGO_X13:
 			rc = scanhash_x13(thr_id, &work, max_nonce, &hashes_done);
 			break;
@@ -2511,6 +2520,12 @@ static void *miner_thread(void *userdata)
 			break;
 		case ALGO_X15:
 			rc = scanhash_x15(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_X16R:
+			rc = scanhash_x16r(thr_id, &work, max_nonce, &hashes_done);
+			break;
+		case ALGO_X16S:
+			rc = scanhash_x16s(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_X17:
 			rc = scanhash_x17(thr_id, &work, max_nonce, &hashes_done);
@@ -3159,6 +3174,7 @@ void parse_arg(int key, char *arg)
 		if (v < 1 || v > 65535) // sanity check
 			show_usage_and_exit(1);
 		opt_api_mcast_port = v;
+		break;
 	case 'B':
 		opt_background = true;
 		break;

@@ -100,9 +100,12 @@ void algo_free_all(int thr_id)
 	free_wildkeccak(thr_id);
 	free_x11evo(thr_id);
 	free_x11(thr_id);
+	free_x12(thr_id);
 	free_x13(thr_id);
 	free_x14(thr_id);
 	free_x15(thr_id);
+	free_x16r(thr_id);
+	free_x16s(thr_id);
 	free_x17(thr_id);
 	free_zr5(thr_id);
 	free_scrypt(thr_id);
