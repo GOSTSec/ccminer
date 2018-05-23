@@ -1,5 +1,5 @@
 
-ccminer 2.2.4 (Jan. 2018)     "lyra2v2 and keccak improvements"
+ccminer 2.2.5 (Apr 2018)             "x12, x16r and x16s algos"
 ---------------------------------------------------------------
 
 ***************************************************************
@@ -120,8 +120,12 @@ its command line interface and options.
                           tribus      use to mine Denarius
                           x11evo      use to mine Revolver
                           x11         use to mine DarkCoin
-                          x14         use to mine X14Coin
+                          x12         use to mine GalaxyCash
+                          x13         use to mine X13
+                          x14         use to mine X14
                           x15         use to mine Halcyon
+                          x16r        use to mine Raven
+                          x16s        use to mine Pigeon and Eden
                           x17         use to mine X17
                           vanilla     use to mine Vanilla (Blake256)
                           veltor      use to mine VeltorCoin
@@ -277,7 +281,13 @@ so we can more efficiently implement new algorithms using the latest hardware
 features.
 
 >>> RELEASE HISTORY <<<
-  Jan. 04th 2017  v2.2.4
+  Apr. 02nd 2018  v2.2.5
+                  New x16r algo for Raven
+                  New x16s algo for Pigeon and Eden
+                  New x12 algo for Galaxycash
+                  Equihash (SIMT) sync issues for the Volta generation
+
+  Jan. 04th 2018  v2.2.4
                   Improve lyra2v2
                   Higher keccak default intensity
                   Drop SM 2.x support by default, for CUDA 9 and more recent
