@@ -8,8 +8,6 @@ BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo (tpruvot)
 
 A part of the recent algos were originally written by [djm34](https://github.com/djm34) and [alexis78](https://github.com/alexis78)
 
-Gostd algo by [PurpleI2P](https://github.com/PurpleI2P/) team
-
 This variant was tested and built on Linux (ubuntu server 14.04, 16.04, Fedora 22 to 25)
 It is also built for Windows 7 to 10 with VStudio 2013, to stay compatible with Windows 7 and Vista.
 
