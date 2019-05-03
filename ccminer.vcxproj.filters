@@ -115,12 +115,15 @@
     <Filter Include="Source Files\CUDA\tribus">
       <UniqueIdentifier>{1e548d79-c217-4203-989a-a592fe2b2de3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\CUDA\phi">
+      <UniqueIdentifier>{311e8d79-1612-4f0f-8591-23a592f2b2d3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\CUDA\x12">
       <UniqueIdentifier>{xde48d89-fx12-1323-129a-b592fe2b2de3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CUDA\gost">
       <UniqueIdentifier>{6a99bc95-f402-465e-9e64-b042bd241bb7}</UniqueIdentifier>
-	</Filter>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="compat\jansson\dump.c">
@@ -548,6 +551,9 @@
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
+    <ClInclude Include="lyra2\cuda_lyra2_sm5.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
     <ClInclude Include="lyra2\cuda_lyra2Z_sm5.cuh">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </ClInclude>
@@ -775,6 +781,9 @@
     <CudaCompile Include="x17\hmq17.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
+    <CudaCompile Include="x17\sonoa.cu">
+      <Filter>Source Files\CUDA\x17</Filter>
+    </CudaCompile>
     <CudaCompile Include="x17\x17.cu">
       <Filter>Source Files\CUDA\x17</Filter>
     </CudaCompile>
@@ -783,6 +792,18 @@
     </CudaCompile>
     <CudaCompile Include="polytimos.cu">
       <Filter>Source Files\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\phi.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\phi2.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\cuda_phi2.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
+    </CudaCompile>
+    <CudaCompile Include="phi\cuda_phi2_cubehash512.cu">
+      <Filter>Source Files\CUDA\phi</Filter>
     </CudaCompile>
     <CudaCompile Include="skunk\skunk.cu">
       <Filter>Source Files\CUDA\skunk</Filter>
@@ -802,9 +823,6 @@
     <ClInclude Include="tribus\cuda_echo512_aes.cuh">
       <Filter>Source Files\CUDA\tribus</Filter>
     </ClInclude>
-    <CudaCompile Include="x11\phi.cu">
-      <Filter>Source Files\CUDA\x11</Filter>
-    </CudaCompile>
     <CudaCompile Include="x11\sib.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
@@ -824,6 +842,9 @@
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
     <CudaCompile Include="x11\bitcore.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\exosis.cu">
       <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
     <CudaCompile Include="x11\veltor.cu">
@@ -913,6 +934,9 @@
     <CudaCompile Include="Algo256\cuda_bmw.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
     </CudaCompile>
+    <CudaCompile Include="lyra2\allium.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
     <CudaCompile Include="lyra2\cuda_lyra2.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
@@ -925,11 +949,23 @@
     <CudaCompile Include="lyra2\lyra2REv2.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
+    <CudaCompile Include="lyra2\cuda_lyra2v3.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <ClInclude Include="lyra2\cuda_lyra2v3_sm3.cuh">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </ClInclude>
+    <CudaCompile Include="lyra2\lyra2REv3.cu">
+      <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
     <CudaCompile Include="lyra2\cuda_lyra2Z.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
     </CudaCompile>
     <CudaCompile Include="lyra2\lyra2Z.cu">
       <Filter>Source Files\CUDA\lyra2</Filter>
+    </CudaCompile>
+    <CudaCompile Include="blake2b.cu">
+      <Filter>Source Files\CUDA\</Filter>
     </CudaCompile>
     <CudaCompile Include="Algo256\blake2s.cu">
       <Filter>Source Files\CUDA\Algo256</Filter>
@@ -956,6 +992,12 @@
       <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sha256\sha256t.cu">
+      <Filter>Source Files\CUDA\sha256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sha256\cuda_sha256q.cu">
+      <Filter>Source Files\CUDA\sha256</Filter>
+    </CudaCompile>
+    <CudaCompile Include="sha256\sha256q.cu">
       <Filter>Source Files\CUDA\sha256</Filter>
     </CudaCompile>
     <CudaCompile Include="sia\sia.cu">

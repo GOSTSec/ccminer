@@ -1,8 +1,9 @@
 extern "C" {
 #include "sph/sph_blake.h"
-#include "sph/sph_groestl.h"
-#include "sph/sph_skein.h"
 #include "sph/sph_keccak.h"
+#include "sph/sph_cubehash.h"
+#include "sph/sph_skein.h"
+#include "sph/sph_groestl.h"
 #include "lyra2/Lyra2.h"
 }
 
@@ -23,6 +24,9 @@ extern void blake256_cpu_setBlock_80(uint32_t *pdata);
 extern void blakeKeccak256_cpu_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNonce, uint64_t *Hash, int order);
 
 extern void skein256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNonce, uint64_t *d_outputHash, int order);
+
+extern void cubehash256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint64_t *d_hash, int order);
+
 extern void skein256_cpu_init(int thr_id, uint32_t threads);
 
 extern void lyra2_cpu_init(int thr_id, uint32_t threads, uint64_t *d_matrix);
@@ -35,12 +39,13 @@ extern uint32_t groestl256_cpu_hash_32(int thr_id, uint32_t threads, uint32_t st
 extern uint32_t groestl256_getSecNonce(int thr_id, int num);
 
 
-extern "C" void lyra2re_hash(void *state, const void *input)
+extern "C" void allium_hash(void *state, const void *input)
 {
 	uint32_t hashA[8], hashB[8];
 
 	sph_blake256_context     ctx_blake;
 	sph_keccak256_context    ctx_keccak;
+	sph_cubehash256_context  ctx_cube;
 	sph_skein256_context     ctx_skein;
 	sph_groestl256_context   ctx_groestl;
 
@@ -53,6 +58,12 @@ extern "C" void lyra2re_hash(void *state, const void *input)
 	sph_keccak256_init(&ctx_keccak);
 	sph_keccak256(&ctx_keccak, hashA, 32);
 	sph_keccak256_close(&ctx_keccak, hashB);
+
+	LYRA2(hashA, 32, hashB, 32, hashB, 32, 1, 8, 8);
+
+	sph_cubehash256_init(&ctx_cube);
+	sph_cubehash256(&ctx_cube, hashA, 32);
+	sph_cubehash256_close(&ctx_cube, hashB);
 
 	LYRA2(hashA, 32, hashB, 32, hashB, 32, 1, 8, 8);
 
@@ -70,7 +81,7 @@ extern "C" void lyra2re_hash(void *state, const void *input)
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
 
-extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_allium(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
@@ -84,7 +95,11 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 	{
 		int dev_id = device_map[thr_id];
 		cudaSetDevice(dev_id);
-		CUDA_LOG_ERROR();
+		if (opt_cudaschedule == -1 && gpu_threads == 1) {
+			cudaDeviceReset();
+			cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+			CUDA_LOG_ERROR();
+		}
 
 		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
 		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
@@ -131,6 +146,8 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 		//keccak256_sm3_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		blakeKeccak256_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 		lyra2_cpu_hash_32(thr_id, throughput, d_hash[thr_id], gtx750ti);
+		cubehash256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
+		lyra2_cpu_hash_32(thr_id, throughput, d_hash[thr_id], gtx750ti);
 		skein256_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
@@ -142,7 +159,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 			uint32_t _ALIGN(64) vhash[8];
 
 			be32enc(&endiandata[19], work->nonces[0]);
-			lyra2re_hash(vhash, endiandata);
+			allium_hash(vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
@@ -150,7 +167,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 				work->nonces[1] = groestl256_getSecNonce(thr_id, 1);
 				if (work->nonces[1] != UINT32_MAX) {
 					be32enc(&endiandata[19], work->nonces[1]);
-					lyra2re_hash(vhash, endiandata);
+					allium_hash(vhash, endiandata);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
@@ -181,7 +198,7 @@ extern "C" int scanhash_lyra2(int thr_id, struct work* work, uint32_t max_nonce,
 }
 
 // cleanup
-extern "C" void free_lyra2(int thr_id)
+extern "C" void free_allium(int thr_id)
 {
 	if (!init[thr_id])
 		return;

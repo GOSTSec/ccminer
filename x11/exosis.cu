@@ -1,13 +1,13 @@
 /**
- * Timetravel CUDA implementation
- *  by tpruvot@github - March 2017
+ * Timetravel (exosis) CUDA implementation
+ *  by tpruvot@github, exosis
  */
 
 #include <stdio.h>
 #include <memory.h>
 #include <unistd.h>
 
-#define HASH_FUNC_BASE_TIMESTAMP 1389040865U // Machinecoin Genesis Timestamp
+#define HASH_FUNC_BASE_TIMESTAMP 1538556426U
 #define HASH_FUNC_COUNT 8
 #define HASH_FUNC_COUNT_PERMUTATIONS 40320U
 
@@ -131,7 +131,7 @@ static void get_travel_order(uint32_t ntime, char *permstr)
 }
 
 // CPU Hash
-extern "C" void timetravel_hash(void *output, const void *input)
+extern "C" void exosis_hash(void *output, const void *input)
 {
 	uint32_t _ALIGN(64) hash[64/4] = { 0 };
 
@@ -252,7 +252,7 @@ void quark_blake512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNoun
 
 static bool init[MAX_GPUS] = { 0 };
 
-extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_exosis(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
@@ -268,7 +268,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 		get_travel_order(ntime, hashOrder);
 		s_ntime = pdata[17];
 		if (opt_debug && !thr_id) {
-			applog(LOG_DEBUG, "timetravel hash order %s (%08x)", hashOrder, ntime);
+			applog(LOG_DEBUG, "exosis hash order %s (%08x)", hashOrder, ntime);
 		}
 	}
 
@@ -315,7 +315,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 	const uint8_t algo80 = first >= 'A' ? first - 'A' + 10 : first - '0';
 	if (algo80 != s_firstalgo) {
 		s_firstalgo = algo80;
-		applog(LOG_INFO, "Timetravel first algo is now %s", algo_strings[algo80 % HASH_FUNC_COUNT]);
+		applog(LOG_INFO, "Exosis first algo is now %s", algo_strings[algo80 % HASH_FUNC_COUNT]);
 	}
 
 	switch (algo80) {
@@ -441,7 +441,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 			uint32_t _ALIGN(64) vhash[8];
 			const uint32_t Htarg = ptarget[7];
 			be32enc(&endiandata[19], work->nonces[0]);
-			timetravel_hash(vhash, endiandata);
+			exosis_hash(vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 				work->valid_nonces = 1;
@@ -450,7 +450,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 				pdata[19] = work->nonces[0];
 				if (work->nonces[1] != 0) {
 					be32enc(&endiandata[19], work->nonces[1]);
-					timetravel_hash(vhash, endiandata);
+					exosis_hash(vhash, endiandata);
 					if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
 						bn_set_target_ratio(work, vhash, 1);
 						work->valid_nonces++;
@@ -478,7 +478,7 @@ extern "C" int scanhash_timetravel(int thr_id, struct work* work, uint32_t max_n
 }
 
 // cleanup
-extern "C" void free_timetravel(int thr_id)
+extern "C" void free_exosis(int thr_id)
 {
 	if (!init[thr_id])
 		return;

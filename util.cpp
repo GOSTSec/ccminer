@@ -616,7 +616,7 @@ err_out:
 json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 	bool longpoll_scan, bool longpoll, int *curl_err)
 {
-	char userpass[512];
+	char userpass[768];
 	// todo, malloc and store that in pool array
 	snprintf(userpass, sizeof(userpass), "%s%c%s", pool->user,
 		strlen(pool->pass)?':':'\0', pool->pass);
@@ -627,7 +627,7 @@ json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 /* called only from longpoll thread, we have the lp_url */
 json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, const char *req, int *curl_err)
 {
-	char userpass[512];
+	char userpass[768];
 	snprintf(userpass, sizeof(userpass), "%s%c%s", pool->user,
 		strlen(pool->pass)?':':'\0', pool->pass);
 
@@ -1442,7 +1442,7 @@ static uint32_t getblocheight(struct stratum_ctx *sctx)
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
 	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
-	const char *claim = NULL, *nreward = NULL;
+	const char *extradata = NULL, *nreward = NULL;
 	size_t coinb1_size, coinb2_size;
 	bool clean, ret = false;
 	int merkle_count, i, p=0;
@@ -1452,7 +1452,8 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	int ntime;
 	char algo[64] = { 0 };
 	get_currentalgo(algo, sizeof(algo));
-	bool has_claim = !strcasecmp(algo, "lbry");
+	bool has_claim = !strcmp(algo, "lbry");
+	bool has_roots = !strcmp(algo, "phi2") && json_array_size(params) == 10;
 
 	if (sctx->is_equihash) {
 		return equi_stratum_notify(sctx, params);
@@ -1461,9 +1462,15 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	job_id = json_string_value(json_array_get(params, p++));
 	prevhash = json_string_value(json_array_get(params, p++));
 	if (has_claim) {
-		claim = json_string_value(json_array_get(params, p++));
-		if (!claim || strlen(claim) != 64) {
+		extradata = json_string_value(json_array_get(params, p++));
+		if (!extradata || strlen(extradata) != 64) {
 			applog(LOG_ERR, "Stratum notify: invalid claim parameter");
+			goto out;
+		}
+	} else if (has_roots) {
+		extradata = json_string_value(json_array_get(params, p++));
+		if (!extradata || strlen(extradata) != 128) {
+			applog(LOG_ERR, "Stratum notify: invalid UTXO root parameter");
 			goto out;
 		}
 	}
@@ -1529,7 +1536,8 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	free(sctx->job.job_id);
 	sctx->job.job_id = strdup(job_id);
 	hex2bin(sctx->job.prevhash, prevhash, 32);
-	if (has_claim) hex2bin(sctx->job.claim, claim, 32);
+	if (has_claim) hex2bin(sctx->job.extra, extradata, 32);
+	if (has_roots) hex2bin(sctx->job.extra, extradata, 64);
 
 	sctx->job.height = getblocheight(sctx);
 
@@ -2164,6 +2172,9 @@ void print_hash_tests(void)
 
 	printf(CL_WHT "CPU HASH ON EMPTY BUFFER RESULTS:" CL_N "\n");
 
+	allium_hash(&hash[0], &buf[0]);
+	printpfx("allium", hash);
+
 	bastionhash(&hash[0], &buf[0]);
 	printpfx("bastion", hash);
 
@@ -2172,6 +2183,9 @@ void print_hash_tests(void)
 
 	blake256hash(&hash[0], &buf[0], 14);
 	printpfx("blake", hash);
+
+	blake2b_hash(&hash[0], &buf[0]);
+	printpfx("blake2b", hash);
 
 	blake2s_hash(&hash[0], &buf[0]);
 	printpfx("blake2s", hash);
@@ -2182,10 +2196,10 @@ void print_hash_tests(void)
 	c11hash(&hash[0], &buf[0]);
 	printpfx("c11", hash);
 
-	cryptolight_hash(&hash[0], &buf[0], 76);
+	cryptolight_hash(&hash[0], &buf[0]);
 	printpfx("cryptolight", hash);
 
-	cryptonight_hash(&hash[0], &buf[0], 76);
+	cryptonight_hash(&hash[0], &buf[0]);
 	printpfx("cryptonight", hash);
 
 	memset(buf, 0, 180);
@@ -2232,8 +2246,14 @@ void print_hash_tests(void)
 	lyra2v2_hash(&hash[0], &buf[0]);
 	printpfx("lyra2v2", hash);
 
+	lyra2v3_hash(&hash[0], &buf[0]);
+	printpfx("lyra2v3", hash);
+
 	lyra2Z_hash(&hash[0], &buf[0]);
 	printpfx("lyra2z", hash);
+
+	monero_hash(&hash[0], &buf[0]);
+	printpfx("monero", hash);
 
 	myriadhash(&hash[0], &buf[0]);
 	printpfx("myriad", hash);
@@ -2247,7 +2267,7 @@ void print_hash_tests(void)
 	pentablakehash(&hash[0], &buf[0]);
 	printpfx("pentablake", hash);
 
-	phihash(&hash[0], &buf[0]);
+	phi2_hash(&hash[0], &buf[0]);
 	printpfx("phi", hash);
 
 	polytimos_hash(&hash[0], &buf[0]);
@@ -2271,7 +2291,10 @@ void print_hash_tests(void)
 	sha256t_hash(&hash[0], &buf[0]);
 	printpfx("sha256t", hash);
 
-	blake2b_hash(&hash[0], &buf[0]);
+	sha256q_hash(&hash[0], &buf[0]);
+	printpfx("sha256q", hash);
+  
+	sia_blake2b_hash(&hash[0], &buf[0]);
 	printpfx("sia", hash);
 
 	sibhash(&hash[0], &buf[0]);
@@ -2289,6 +2312,9 @@ void print_hash_tests(void)
 	skunk_hash(&hash[0], &buf[0]);
 	printpfx("skunk", hash);
 
+	stellite_hash(&hash[0], &buf[0]);
+	printpfx("stelitte", hash);
+
 	s3hash(&hash[0], &buf[0]);
 	printpfx("S3", hash);
 
@@ -2297,6 +2323,9 @@ void print_hash_tests(void)
 
 	bitcore_hash(&hash[0], &buf[0]);
 	printpfx("bitcore", hash);
+	
+	exosis_hash(&hash[0], &buf[0]);
+	printpfx("exosis", hash);
 
 	blake256hash(&hash[0], &buf[0], 8);
 	printpfx("vanilla", hash);

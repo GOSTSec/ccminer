@@ -1,3 +1,5 @@
+/* phi2 cubehash-512 144-bytes input (80 + 64) */
+
 #include <cuda_helper.h>
 #include <cuda_vectors.h>
 
@@ -15,6 +17,8 @@
 
 #define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
 
+#ifdef NO_MIDSTATE
+
 __device__ __constant__
 static const uint32_t c_IV_512[32] = {
 	0x2AEA2A61, 0x50F494D4, 0x2D538B8B, 0x4167D83E,
@@ -26,6 +30,8 @@ static const uint32_t c_IV_512[32] = {
 	0xD65C8A2B, 0xA5A70E75, 0xB1C62456, 0xBC796576,
 	0x1921C8F7, 0xE7989AF1, 0x7795D246, 0xD43E3B44
 };
+
+#endif
 
 __device__ __forceinline__
 static void rrounds(uint32_t x[2][2][2][2][2])
@@ -209,53 +215,7 @@ static void Final(uint32_t x[2][2][2][2][2], uint32_t *hashval)
 	hash_fromx(hashval, x);
 }
 
-
-/***************************************************/
-
-__global__
-void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
-{
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	if (thread < threads)
-	{
-		uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
-
-		int hashPosition = nounce - startNounce;
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
-
-		uint32_t x[2][2][2][2][2];
-		Init(x);
-
-		Update32(x, &Hash[0]);
-		Update32(x, &Hash[8]);
-
-		// Padding Block
-		uint32_t last[8];
-		last[0] = 0x80;
-		#pragma unroll 7
-		for (int i=1; i < 8; i++) last[i] = 0;
-		Update32(x, last);
-
-		Final(x, Hash);
-	}
-}
-
-__host__
-void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order)
-{
-	const uint32_t threadsperblock = 256;
-
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
-	dim3 block(threadsperblock);
-
-	size_t shared_size = 0;
-
-	x11_cubehash512_gpu_hash_64<<<grid, block, shared_size>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
-}
-
-__host__
-void x11_cubehash512_cpu_init(int thr_id, uint32_t threads) { }
-
+__host__ void phi2_cubehash512_cpu_init(int thr_id, uint32_t threads) { }
 
 /***************************************************/
 
@@ -265,7 +225,7 @@ void x11_cubehash512_cpu_init(int thr_id, uint32_t threads) { }
  */
 
 __constant__ static uint32_t c_midstate128[32];
-__constant__ static uint32_t c_PaddedMessage80[20];
+__constant__ static uint32_t c_PaddedMessage_144[36];
 
 #undef SPH_C32
 #undef SPH_C64
@@ -274,21 +234,19 @@ __constant__ static uint32_t c_PaddedMessage80[20];
 #include "sph/sph_cubehash.h"
 
 __host__
-void cubehash512_setBlock_80(int thr_id, uint32_t* endiandata)
+void cubehash512_setBlock_144(int thr_id, uint32_t* endiandata)
 {
 	sph_cubehash512_context ctx_cubehash;
 	sph_cubehash512_init(&ctx_cubehash);
 	sph_cubehash512(&ctx_cubehash, (void*)endiandata, 64);
 #ifndef NO_MIDSTATE
 	cudaMemcpyToSymbol(c_midstate128, ctx_cubehash.state, 128, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(c_PaddedMessage80, &endiandata[16], 16, 0, cudaMemcpyHostToDevice);
-#else
-	cudaMemcpyToSymbol(c_PaddedMessage80, endiandata, sizeof(c_PaddedMessage80), 0, cudaMemcpyHostToDevice);
 #endif
+	cudaMemcpyToSymbol(c_PaddedMessage_144, endiandata, sizeof(c_PaddedMessage_144), 0, cudaMemcpyHostToDevice);
 }
 
 __global__
-void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash)
+void cubehash512_gpu_hash_144(const uint32_t threads, const uint32_t startNounce, uint64_t *g_outhash)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -300,17 +258,14 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 		Init(x);
 
 		// first 32 bytes
-		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage80[0]);
-		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage80[4]);
+		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage_144[0]);
+		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage_144[4]);
 		Update32(x, message);
 
 		// second 32 bytes
-		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage80[8]);
-		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage80[12]);
+		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage_144[8]);
+		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage_144[12]);
 		Update32(x, message);
-
-		// last 16 bytes
-		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage80[16]);
 #else
 		AS_UINT2(x[0][0][0][0]) = AS_UINT2(&c_midstate128[ 0]);
 		AS_UINT2(x[0][0][0][1]) = AS_UINT2(&c_midstate128[ 2]);
@@ -329,12 +284,18 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 		AS_UINT2(x[1][1][0][1]) = AS_UINT2(&c_midstate128[26]);
 		AS_UINT2(x[1][1][1][0]) = AS_UINT2(&c_midstate128[28]);
 		AS_UINT2(x[1][1][1][1]) = AS_UINT2(&c_midstate128[30]);
-
-		// last 16 bytes
-		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage80[0]);
 #endif
-		// nonce + Padding
+		// nonce + state root
+		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage_144[16]);
 		message[3] = cuda_swab32(nonce);
+		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage_144[20]); // state
+		Update32(x, message);
+
+		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage_144[24]); // state
+		AS_UINT4(&message[4]) = AS_UINT4(&c_PaddedMessage_144[28]); // utxo
+		Update32(x, message);
+
+		AS_UINT4(&message[0]) = AS_UINT4(&c_PaddedMessage_144[32]); // utxo
 		message[4] = 0x80;
 		message[5] = 0;
 		message[6] = 0;
@@ -347,12 +308,12 @@ void cubehash512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce,
 }
 
 __host__
-void cubehash512_cuda_hash_80(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
+void cubehash512_cuda_hash_144(const int thr_id, const uint32_t threads, const uint32_t startNounce, uint32_t *d_hash)
 {
 	const uint32_t threadsperblock = 256;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
-	cubehash512_gpu_hash_80 <<<grid, block>>> (threads, startNounce, (uint64_t*) d_hash);
+	cubehash512_gpu_hash_144 <<<grid, block>>> (threads, startNounce, (uint64_t*) d_hash);
 }
 
